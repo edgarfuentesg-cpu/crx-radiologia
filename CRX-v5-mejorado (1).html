@@ -1,0 +1,3523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRX Radiología — Sistema de Gestión v5</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#08101e;--bg2:#0f1929;--bg3:#172236;--bg4:#1d2d47;
+  --border:rgba(99,179,237,0.1);--border2:rgba(99,179,237,0.22);
+  --accent:#63b3ed;--accent2:#3b8fd4;--accent-dim:rgba(99,179,237,0.13);
+  --text:#dde6f0;--text2:#8aa0b8;--text3:#506070;
+  --success:#4ade80;--success-dim:rgba(74,222,128,0.12);
+  --danger:#f87171;--danger-dim:rgba(248,113,113,0.12);
+  --warn:#fbbf24;--warn-dim:rgba(251,191,36,0.12);
+  --purple:#c084fc;--purple-dim:rgba(192,132,252,0.12);
+  --r:9px;--rl:13px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;font-size:14px;line-height:1.5}
+
+/* SIDEBAR */
+.sidebar{width:230px;min-width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
+.sl{padding:16px 14px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sl-icon{width:34px;height:34px;background:linear-gradient(135deg,#3b8fd4,#63b3ed);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.sl-name{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.sl-sub{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.nav{padding:8px 6px;flex:1}
+.nav-sec{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--text3);padding:9px 8px 3px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;transition:all .13s;margin-bottom:2px;border:1px solid transparent}
+.ni:hover{background:var(--bg3);color:var(--text)}
+.ni.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(99,179,237,0.18)}
+.ni-ico{width:17px;text-align:center;font-size:14px;flex-shrink:0}
+.ni-badge{margin-left:auto;background:var(--danger-dim);color:var(--danger);font-size:10px;font-family:var(--mono);padding:1px 6px;border-radius:20px;font-weight:600}
+.sb-bottom{padding:10px 6px;border-top:1px solid var(--border)}
+.user-row{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--bg3);border-radius:9px;cursor:pointer}
+.user-row:hover{background:var(--bg4)}
+.av{width:30px;height:30px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+.u-name{font-size:12px;font-weight:500}
+.u-role{font-size:10.5px;color:var(--text3)}
+
+/* MAIN */
+.main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(8,16,30,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;gap:10px}
+.tb-title{font-size:15px;font-weight:600;flex:1}
+.tb-date{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.content{padding:18px 20px;flex:1}
+
+/* BUTTONS */
+.btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .13s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:hover{background:var(--bg4);border-color:var(--accent)}
+.btn.prim{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn.prim:hover{background:var(--accent);border-color:var(--accent)}
+.btn.dang{background:var(--danger-dim);border-color:var(--danger);color:var(--danger)}
+.btn.succ{background:var(--success-dim);border-color:var(--success);color:var(--success)}
+.btn.warn_{background:var(--warn-dim);border-color:var(--warn);color:var(--warn)}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn.xs{padding:3px 7px;font-size:11px}
+
+/* STAT CARDS */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.sg5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:15px 17px;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sc.blue::before{background:var(--accent)}
+.sc.green::before{background:var(--success)}
+.sc.purple::before{background:var(--purple)}
+.sc.warn::before{background:var(--warn)}
+.sc.red::before{background:var(--danger)}
+.sc.teal::before{background:#2dd4bf}
+.sc-lbl{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:6px}
+.sc-val{font-size:22px;font-weight:600;letter-spacing:-.5px;font-family:var(--mono)}
+.sc-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.sc-ico{position:absolute;right:13px;top:13px;font-size:18px;opacity:.22}
+
+/* TABLE */
+.tw{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:14px}
+.th{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;gap:6px}
+.th-title{font-size:13px;font-weight:600;flex:1;min-width:100px}
+.si{padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border .13s}
+.si:focus{border-color:var(--accent)}
+.si::placeholder{color:var(--text3)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 13px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 13px;border-bottom:1px solid rgba(99,179,237,0.05);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(99,179,237,0.025)}
+.mono{font-family:var(--mono);font-size:12px}
+.tscroll{overflow-x:auto}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.badge.green{background:var(--success-dim);color:var(--success)}
+.badge.red{background:var(--danger-dim);color:var(--danger)}
+.badge.blue{background:var(--accent-dim);color:var(--accent)}
+.badge.warn{background:var(--warn-dim);color:var(--warn)}
+.badge.purple{background:var(--purple-dim);color:var(--purple)}
+.badge.gray{background:var(--bg4);color:var(--text2)}
+.badge.teal{background:rgba(45,212,191,0.12);color:#2dd4bf}
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:14px}
+.mo.open{display:flex}
+.md{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);width:600px;max-width:100%;max-height:92vh;overflow-y:auto;animation:moin .18s ease}
+@keyframes moin{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+.md-h{padding:14px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;position:sticky;top:0;background:var(--bg2);z-index:1}
+.md-b{padding:16px}
+.md-f{padding:11px 17px;border-top:1px solid var(--border);display:flex;gap:7px;justify-content:flex-end;position:sticky;bottom:0;background:var(--bg2)}
+.xbtn{background:none;border:none;color:var(--text3);font-size:17px;cursor:pointer;line-height:1}
+.xbtn:hover{color:var(--text)}
+
+/* FORMS */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.fg.c1{grid-template-columns:1fr}
+.fg.c3{grid-template-columns:1fr 1fr 1fr}
+.fg.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+.fgrp{display:flex;flex-direction:column;gap:5px}
+.fgrp.full{grid-column:1/-1}
+label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:4px}
+input,select,textarea{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border .13s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--bg2)}
+textarea{resize:vertical;min-height:60px}
+input[readonly]{color:var(--text2);cursor:default}
+
+/* MIC BUTTON */
+.mic-wrap{position:relative;display:flex;gap:5px}
+.mic-wrap input{flex:1}
+.mic-btn{padding:0 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px;color:var(--text3);cursor:pointer;font-size:14px;flex-shrink:0;transition:all .13s;display:flex;align-items:center}
+.mic-btn:hover{border-color:var(--accent);color:var(--accent)}
+.mic-btn.listening{background:var(--danger-dim);border-color:var(--danger);color:var(--danger);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* SECTIONS */
+.sec{display:none}
+.sec.active{display:block}
+
+/* EMPTY */
+.es{text-align:center;padding:36px 20px;color:var(--text3);font-size:13px}
+.es-ico{font-size:26px;margin-bottom:6px}
+
+/* FILTER BAR */
+.filter-bar{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-bar label{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.filter-bar input,.filter-bar select{padding:6px 9px;font-size:12.5px;width:auto}
+
+/* CHART BARS */
+.barchart{display:flex;align-items:flex-end;gap:4px;height:110px}
+.bg-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%;min-width:0}
+.bg-bar .bar{width:100%;border-radius:3px 3px 0 0;opacity:.75;transition:height .4s ease;min-height:2px}
+.bg-bar .bar:hover{opacity:1}
+.bg-bar .blbl{font-size:9px;color:var(--text3);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bg-bar .bval{font-size:9px;font-family:var(--mono)}
+
+/* PIE-LIKE BREAKDOWN */
+.breakdown{display:flex;flex-direction:column;gap:7px}
+.bk-item{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.bk-bar-wrap{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.bk-bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.bk-pct{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:36px;text-align:right}
+
+/* TOAST */
+#toast{position:fixed;bottom:16px;right:16px;z-index:9999;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.5);display:none;gap:7px;align-items:center}
+#toast.show{display:flex;animation:tin .2s ease}
+@keyframes tin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* NOTIFICACIÓN VENTA EXITOSA */
+#notif-venta{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:8000;display:none;align-items:center;justify-content:center}
+#notif-venta.open{display:flex;animation:moin .25s ease}
+.notif-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:480px;max-width:96vw;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.notif-header{background:linear-gradient(135deg,rgba(74,222,128,.15),rgba(99,179,237,.1));border-bottom:1px solid var(--border);padding:20px 22px;text-align:center;position:relative}
+.notif-icon{font-size:48px;margin-bottom:8px;display:block}
+.notif-title{font-size:18px;font-weight:700;color:var(--success);letter-spacing:-.3px}
+.notif-sub{font-size:12px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+.notif-body{padding:18px 22px}
+.notif-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:7px;font-size:13px}
+.notif-row .lbl{color:var(--text2)}
+.notif-row .val{font-family:var(--mono);font-weight:700}
+.notif-devuelta{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:10px;padding:14px;text-align:center;margin:12px 0 4px}
+.notif-devuelta .dev-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.notif-devuelta .dev-val{font-size:32px;font-weight:700;font-family:var(--mono);color:var(--success)}
+.notif-actions{padding:14px 22px 20px;display:flex;flex-direction:column;gap:8px}
+.notif-actions .btn-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.nact-btn{padding:11px 8px;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;text-align:center;transition:all .13s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.nact-btn:hover{background:var(--bg4);border-color:var(--accent)}
+.nact-btn .nact-ico{font-size:20px}
+.nact-btn.primary{background:rgba(99,179,237,.15);border-color:var(--accent);color:var(--accent)}
+.nact-btn.primary:hover{background:rgba(99,179,237,.25)}
+.nact-btn.success{background:rgba(74,222,128,.1);border-color:var(--success);color:var(--success)}
+.nact-btn.success:hover{background:rgba(74,222,128,.2)}
+/* MODAL EXCEL DRIVE */
+#mo-excel{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:14px}
+#mo-excel.open{display:flex}
+
+/* NET CARD */
+.net-card{background:var(--bg2);border:2px solid var(--border2);border-radius:var(--rl);padding:15px 17px;position:relative;overflow:hidden;margin-bottom:18px}
+.net-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--success),var(--accent))}
+.net-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.net-item{text-align:center}
+.net-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:4px}
+.net-val{font-size:20px;font-weight:700;font-family:var(--mono)}
+.net-div{width:1px;height:40px;background:var(--border)}
+
+/* G2 */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:14px}
+
+/* ALRT */
+.alrt{padding:9px 12px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.alrt.warn{background:var(--warn-dim);color:var(--warn);border:1px solid rgba(251,191,36,.2)}
+.alrt.dang{background:var(--danger-dim);color:var(--danger);border:1px solid rgba(248,113,113,.2)}
+.alrt.info{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(99,179,237,.2)}
+
+/* RANGE SETTINGS */
+.range-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.range-card h4{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .sidebar{width:52px;min-width:52px}
+  .sl-name,.sl-sub,.ni span:not(.ni-ico),.ni-badge,.u-name,.u-role{display:none}
+  .ni{justify-content:center;padding:9px}
+  .sb-bottom .user-row{justify-content:center;padding:8px}
+  .main{margin-left:52px}
+  .sg,.sg5{grid-template-columns:1fr 1fr}
+  .g2{grid-template-columns:1fr}
+  .fg,.fg.c3,.fg.c4{grid-template-columns:1fr}
+  .content{padding:12px}
+  .topbar{padding:0 12px}
+}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ══════ PANTALLA DE LOGIN ══════ -->
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div id="login-box" style="width:380px;max-width:100%">
+    <div style="text-align:center;margin-bottom:26px">
+      <div style="width:60px;height:60px;background:linear-gradient(135deg,#3b8fd4,#63b3ed);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:12px;box-shadow:0 8px 24px rgba(99,179,237,0.25)">🩻</div>
+      <div style="font-size:22px;font-weight:700;letter-spacing:-.5px">CRX Radiología</div>
+      <div style="font-size:11.5px;color:var(--text3);font-family:var(--mono);margin-top:3px">Sistema de Gestión · v5</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:24px;box-shadow:0 16px 48px rgba(0,0,0,.4)">
+      <div class="fgrp" style="margin-bottom:13px">
+        <label>Usuario</label>
+        <input id="login-user" placeholder="admin" autocomplete="username" style="font-size:14px;padding:10px 12px">
+      </div>
+      <div class="fgrp" style="margin-bottom:16px">
+        <label>Contraseña</label>
+        <div style="position:relative">
+          <input id="login-pass" type="password" placeholder="••••••" autocomplete="current-password" style="font-size:14px;padding:10px 40px 10px 12px">
+          <button onclick="var i=document.getElementById('login-pass');i.type=i.type==='password'?'text':'password'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;line-height:1">👁</button>
+        </div>
+      </div>
+      <div id="login-error" style="color:var(--danger);font-size:12px;margin-bottom:10px;min-height:16px;text-align:center;font-weight:500"></div>
+      <button onclick="loginApp()" class="btn prim" style="width:100%;justify-content:center;padding:10px 0;font-size:14px;border-radius:9px">🔑 Ingresar al sistema</button>
+      <div style="margin-top:14px;padding:10px;background:var(--bg3);border-radius:8px;font-size:11.5px;color:var(--text3);text-align:center;line-height:1.8">
+        Usuario por defecto: <code style="color:var(--accent)">admin</code> · Clave: <code style="color:var(--accent)">1234</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ APP SHELL ══════ -->
+<div id="app-shell" style="display:none;width:100%;min-height:100vh;flex-shrink:0">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sl">
+    <div class="sl-icon">🩻</div>
+    <div><div class="sl-name">CRX Radiología</div><div class="sl-sub">v5.0 · plus</div></div>
+  </div>
+  <div class="nav">
+    <div class="nav-sec">Operaciones</div>
+    <div class="ni active" data-sec="dashboard" onclick="goto('dashboard',this)"><span class="ni-ico">📊</span><span>Dashboard</span></div>
+    <div class="ni" data-sec="ventas" onclick="goto('ventas',this)"><span class="ni-ico">🏧</span><span>Ventas</span></div>
+    <div class="ni" data-sec="inventario" onclick="goto('inventario',this)"><span class="ni-ico">📦</span><span>Inventario</span><span class="ni-badge" id="inv-alert-badge" style="display:none">!</span></div>
+    <div class="nav-sec">Config</div>
+    <div class="ni" data-sec="recetas" onclick="goto('recetas',this)"><span class="ni-ico">🔬</span><span>Recetas</span></div>
+    <div class="nav-sec">Finanzas</div>
+    <div class="ni" data-sec="gastos" onclick="goto('gastos',this)"><span class="ni-ico">💸</span><span>Gastos</span></div>
+    <div class="ni" data-sec="historial" onclick="goto('historial',this)"><span class="ni-ico">🗂</span><span>Historial</span></div>
+    <div class="ni" data-sec="config" onclick="goto('config',this)"><span class="ni-ico">⚙️</span><span>Configuración</span></div>
+  </div>
+  <div class="sb-bottom">
+    <div class="user-row" onclick="goto('config',document.querySelector('.ni[data-sec=config]'))">
+      <div class="av" id="sb-av">DR</div>
+      <div><div class="u-name" id="sb-name">Administrador</div><div class="u-role" id="u-role-lbl">Admin</div></div>
+    </div>
+    <button onclick="logoutApp()" style="width:100%;margin-top:7px;padding:7px;background:var(--danger-dim);border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-family:var(--font);font-size:12px;cursor:pointer;font-weight:500">🚪 <span>Cerrar sesión</span></button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <span class="tb-title" id="pg-title">Dashboard</span>
+    <span class="tb-date" id="tb-date"></span>
+    <button class="btn sm" onclick="openImpresora()">🖨️ Impresora</button>
+    <button class="btn sm" onclick="exportExcel()">📊 Excel</button>
+    <button class="btn sm" onclick="exportPDF()">📄 PDF</button>
+    <div id="sync-indicator" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--bg3);border:1px solid var(--border);color:var(--text3)" title="Estado sincronización Drive">
+      <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block"></span>
+      <span id="sync-label">Sin Drive</span>
+    </div>
+    <button class="btn sm" id="btn-sync-now" onclick="syncNow()" style="display:none" title="Sincronizar ahora">☁️</button>
+  </div>
+  <div class="content">
+
+    <!-- ══════════ DASHBOARD ══════════ -->
+    <div class="sec active" id="sec-dashboard">
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <label>📅 Desde</label>
+        <input type="date" id="d-desde" class="si">
+        <label>Hasta</label>
+        <input type="date" id="d-hasta" class="si">
+        <label>Método pago</label>
+        <select id="d-metodo-filter" class="si">
+          <option value="">Todos</option>
+          <option>Efectivo</option><option>Nequi</option><option>Daviplata</option>
+          <option>Tarjeta débito</option><option>Tarjeta crédito</option>
+          <option>Transferencia</option><option>Seguro médico</option>
+        </select>
+        <label>Tipo gasto</label>
+        <select id="d-gasto-filter" class="si">
+          <option value="">Todos</option>
+          <option>Comida / Alimentación</option><option>Servicios públicos</option>
+          <option>Nómina</option><option>Insumos médicos</option>
+          <option>Mantenimiento equipos</option><option>Arriendo</option>
+          <option>Transporte</option><option>Marketing</option><option>Otro</option>
+        </select>
+        <button class="btn prim sm" onclick="renderDashboard()">🔍 Filtrar</button>
+        <button class="btn sm" onclick="resetDashFilter()">✕ Limpiar</button>
+      </div>
+
+      <!-- NET BALANCE -->
+      <div class="net-card">
+        <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Balance del período seleccionado</div>
+        <div class="net-row">
+          <div class="net-item"><div class="net-lbl">Total Ventas</div><div class="net-val" id="net-ventas" style="color:var(--success)">$0</div></div>
+          <div class="net-div"></div>
+          <div class="net-item"><div class="net-lbl">Total Gastos</div><div class="net-val" id="net-gastos" style="color:var(--danger)">$0</div></div>
+          <div class="net-div"></div>
+          <div class="net-item"><div class="net-lbl">Utilidad Neta</div><div class="net-val" id="net-util">$0</div></div>
+          <div class="net-div"></div>
+          <div class="net-item"><div class="net-lbl">Transacciones</div><div class="net-val" id="net-n" style="color:var(--accent)">0</div></div>
+          <div class="net-div"></div>
+          <div class="net-item"><div class="net-lbl">Ticket Promedio</div><div class="net-val" id="net-avg" style="color:var(--purple)">$0</div></div>
+        </div>
+      </div>
+
+      <div class="sg">
+        <div class="sc blue"><div class="sc-lbl">Ventas hoy</div><div class="sc-val" id="d-hoy">$0</div><div class="sc-sub" id="d-hoy-n">0 estudios</div><span class="sc-ico">💰</span></div>
+        <div class="sc green"><div class="sc-lbl">Ventas mes</div><div class="sc-val" id="d-mes">$0</div><div class="sc-sub" id="d-mes-n">0 registros</div><span class="sc-ico">📅</span></div>
+        <div class="sc red"><div class="sc-lbl">Gastos mes</div><div class="sc-val" id="d-gastos-mes">$0</div><div class="sc-sub" id="d-gastos-mes-n">0 gastos</div><span class="sc-ico">💸</span></div>
+        <div class="sc warn"><div class="sc-lbl">Stock crítico</div><div class="sc-val" id="d-stock">0</div><div class="sc-sub">bajo mínimo</div><span class="sc-ico">⚠️</span></div>
+      </div>
+
+      <div class="g2">
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">Ventas por día (últimos 7 días)</span></div>
+          <div style="padding:14px 16px"><div class="barchart" id="d-chart"></div></div>
+        </div>
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">Ventas por método de pago</span></div>
+          <div style="padding:14px 16px"><div class="breakdown" id="d-metodos"></div></div>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-top:14px">
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">Gastos por categoría</span></div>
+          <div style="padding:14px 16px"><div class="breakdown" id="d-gastos-breakdown"></div></div>
+        </div>
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">Top estudios solicitados</span></div>
+          <table><thead><tr><th>Estudio</th><th>Cant.</th><th>Total</th></tr></thead><tbody id="d-estudios"></tbody></table>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-top:14px">
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">Últimas ventas</span></div>
+          <table><thead><tr><th>ID</th><th>Paciente</th><th>Estudio</th><th>Total</th></tr></thead><tbody id="d-ventas-recent"></tbody></table>
+        </div>
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">Alertas de inventario</span></div>
+          <table><thead><tr><th>Artículo</th><th>Stock</th><th>Mín</th><th>Estado</th></tr></thead><tbody id="d-inv-alerts"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ VENTAS ══════════ -->
+    <div class="sec" id="sec-ventas">
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Registro de Ventas</span>
+          <input class="si" style="width:170px" placeholder="🔍 Buscar..." id="v-search" oninput="filterVentas()">
+          <select class="si" id="v-f-metodo" onchange="filterVentas()">
+            <option value="">Todos los métodos</option>
+            <option>Efectivo</option><option>Nequi</option><option>Daviplata</option>
+            <option>Tarjeta débito</option><option>Tarjeta crédito</option>
+            <option>Transferencia</option><option>Seguro médico</option>
+          </select>
+          <button class="btn prim sm" onclick="openVenta()">+ Nueva Venta</button>
+          <button class="btn sm" onclick="exportExcelDrive()" title="Exportar Excel">📊</button>
+          <button class="btn sm" onclick="openModal('mo-excel')" title="Opciones Excel/Drive">☁️</button>
+        </div>
+        <div class="tscroll"><table>
+          <thead><tr><th>ID</th><th>Fecha</th><th>Paciente</th><th>ID Paciente</th><th>Clínica</th><th>Estudio</th><th>Formato</th><th>Método</th><th>Total</th><th>Acciones</th></tr></thead>
+          <tbody id="v-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══════════ INVENTARIO ══════════ -->
+    <div class="sec" id="sec-inventario">
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Inventario de Bodega</span>
+          <input class="si" style="width:180px" placeholder="🔍 Buscar..." id="i-search" oninput="filterInventario()">
+          <button class="btn prim sm" onclick="openInv(null)">+ Nuevo Artículo</button>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>Artículo</th><th>Stock Actual</th><th>Punto Reorden</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="i-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ RECETAS ══════════ -->
+    <div class="sec" id="sec-recetas">
+      <div class="alrt info">💡 Las recetas definen qué insumos se descuentan automáticamente del inventario al registrar una venta con ese estudio.</div>
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Recetas de consumo por estudio</span>
+          <input class="si" style="width:180px" placeholder="🔍 Buscar..." id="r-search" oninput="filterRecetas()">
+          <button class="btn prim sm" onclick="openReceta(null)">+ Nueva Receta</button>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>Estudio</th><th>Artículo que gasta</th><th>Cantidad</th><th>Stock actual</th><th>Acciones</th></tr></thead>
+          <tbody id="r-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ GASTOS ══════════ -->
+    <div class="sec" id="sec-gastos">
+      <div class="filter-bar">
+        <label>📅 Desde</label><input type="date" id="g-desde" class="si">
+        <label>Hasta</label><input type="date" id="g-hasta" class="si">
+        <label>Concepto</label>
+        <select class="si" id="g-f-concepto" onchange="renderGastos()">
+          <option value="">Todos</option>
+          <option>Comida / Alimentación</option><option>Servicios públicos</option><option>Nómina</option>
+          <option>Insumos médicos</option><option>Mantenimiento equipos</option><option>Arriendo</option>
+          <option>Transporte</option><option>Marketing</option><option>Otro</option>
+        </select>
+        <button class="btn prim sm" onclick="renderGastos()">🔍 Filtrar</button>
+        <button class="btn sm" onclick="resetGastoFilter()">✕</button>
+      </div>
+      <div class="sg" style="grid-template-columns:repeat(3,1fr)">
+        <div class="sc green"><div class="sc-lbl">Gastos período</div><div class="sc-val" id="g-total-mes">$0</div><div class="sc-sub" id="g-total-mes-n">0 registros</div><span class="sc-ico">📊</span></div>
+        <div class="sc blue"><div class="sc-lbl">Total acumulado</div><div class="sc-val" id="g-total-all">$0</div><span class="sc-ico">💼</span></div>
+        <div class="sc warn"><div class="sc-lbl">Concepto mayor</div><div class="sc-val" id="g-top" style="font-size:14px;line-height:1.3">—</div><span class="sc-ico">🏷</span></div>
+      </div>
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Registro de Gastos</span>
+          <input class="si" style="width:180px" placeholder="🔍 Buscar..." id="g-search" oninput="renderGastos()">
+          <button class="btn prim sm" onclick="openGasto(null)">+ Nuevo Gasto</button>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Comprobante</th><th>Acciones</th></tr></thead>
+          <tbody id="g-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ HISTORIAL ══════════ -->
+    <div class="sec" id="sec-historial">
+      <div class="filter-bar">
+        <label>📅 Desde</label><input type="date" id="h-desde" class="si">
+        <label>Hasta</label><input type="date" id="h-hasta" class="si">
+        <label>Método</label>
+        <select class="si" id="h-f-metodo" onchange="renderHistorial()">
+          <option value="">Todos</option>
+          <option>Efectivo</option><option>Nequi</option><option>Daviplata</option>
+          <option>Tarjeta débito</option><option>Tarjeta crédito</option>
+          <option>Transferencia</option><option>Seguro médico</option>
+        </select>
+        <button class="btn prim sm" onclick="renderHistorial()">🔍 Filtrar</button>
+        <button class="btn sm" onclick="resetHistFilter()">✕</button>
+        <button class="btn dang sm" style="margin-left:auto" onclick="if(confirm('¿Borrar TODO el historial de ventas?')){DB.ventas=[];save();renderHistorial();renderDashboard();toast('Historial borrado','⚠️')}">🗑 Limpiar</button>
+      </div>
+      <div class="g2" style="margin-bottom:14px">
+        <div class="sc blue" style="margin:0"><div class="sc-lbl">Ventas filtradas</div><div class="sc-val" id="h-total-n">0</div><span class="sc-ico">📋</span></div>
+        <div class="sc green" style="margin:0"><div class="sc-lbl">Ingresos filtrados</div><div class="sc-val" id="h-total-v">$0</div><span class="sc-ico">💰</span></div>
+      </div>
+      <div class="tw">
+        <div class="th"><span class="th-title">Historial completo de ventas</span>
+        <input class="si" style="width:170px" placeholder="🔍 Buscar..." id="h-search" oninput="renderHistorial()">
+        <button class="btn sm" onclick="exportExcelDrive()">📊 Excel</button></div>
+        <div class="tscroll"><table>
+          <thead><tr><th>ID</th><th>Fecha</th><th>Paciente</th><th>ID Paciente</th><th>Clínica</th><th>Estudio</th><th>Formato</th><th>Método</th><th>Total</th><th>Notas</th></tr></thead>
+          <tbody id="h-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══════════ CONFIGURACIÓN ══════════ -->
+    <div class="sec" id="sec-config">
+      <div class="g2">
+        <div>
+          <div class="tw" style="margin-bottom:14px">
+            <div class="th"><span class="th-title">⚙️ Datos del centro</span></div>
+            <div class="md-b">
+              <div class="fg c1" style="gap:10px">
+                <div class="fgrp"><label>Nombre del centro</label><input id="cfg-nombre" placeholder="CRX Radiología"></div>
+                <div class="fgrp"><label>NIT / RUT</label><input id="cfg-nit" placeholder="900.123.456-7"></div>
+                <div class="fgrp"><label>Dirección</label><input id="cfg-dir" placeholder="Cali, Colombia"></div>
+                <div class="fgrp"><label>Teléfono</label><input id="cfg-tel" placeholder="+57 2 ..."></div>
+                <div class="fgrp"><label>Nombre usuario (sidebar)</label><input id="cfg-user" placeholder="Dr. Admin"></div>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button class="btn prim sm" onclick="saveConfig()">💾 Guardar</button>
+              </div>
+            </div>
+          </div>
+          <div class="tw">
+            <div class="th"><span class="th-title">📤 Exportación de datos</span></div>
+            <div class="md-b" style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn sm" onclick="openModal('mo-excel')">📊 Exportar Excel / Drive (.xlsx)</button>
+              <button class="btn sm" onclick="exportExcelDrive()">⬇️ Descarga rápida Excel (5 hojas)</button>
+              <button class="btn sm" onclick="exportPDF()">📄 Exportar reporte PDF</button>
+              <button class="btn sm" onclick="exportJSON()">💾 Backup JSON completo</button>
+              <button class="btn dang sm" onclick="importJSON()">📥 Restaurar desde backup JSON</button>
+              <div style="height:1px;background:var(--border);margin:4px 0"></div>
+              <button class="btn succ sm" onclick="openModal('mo-drive')">☁️ Conectar Google Drive</button>
+              <button class="btn sm" onclick="syncAllToDrive()">🔄 Sincronizar con Drive ahora</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="tw">
+            <div class="th"><span class="th-title">🎚 Rangos personalizados por administrador</span></div>
+            <div class="md-b">
+              <div class="range-card">
+                <h4>Ventas — umbral "buena venta" (monto)</h4>
+                <div class="fg">
+                  <div class="fgrp"><label>Mínimo</label><input type="number" id="rng-v-min" placeholder="50000"></div>
+                  <div class="fgrp"><label>Máximo (alerta alta)</label><input type="number" id="rng-v-max" placeholder="500000"></div>
+                </div>
+              </div>
+              <div class="range-card">
+                <h4>Gastos — umbral por concepto mensual</h4>
+                <div class="fg">
+                  <div class="fgrp"><label>Alerta amarilla (% ingresos)</label><input type="number" id="rng-g-warn" placeholder="30" min="1" max="100"></div>
+                  <div class="fgrp"><label>Alerta roja (% ingresos)</label><input type="number" id="rng-g-danger" placeholder="60" min="1" max="100"></div>
+                </div>
+              </div>
+              <div class="range-card">
+                <h4>Inventario — margen sobre mínimo</h4>
+                <div class="fgrp"><label>Stock "bajo" = mínimo × factor</label><input type="number" id="rng-inv" placeholder="1.5" step="0.1" min="1" max="5"></div>
+              </div>
+              <button class="btn prim sm" style="margin-top:10px" onclick="saveRangos()">💾 Guardar rangos</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILA 2: Usuarios e Impresora -->
+      <div class="g2" style="margin-top:14px">
+        <!-- USUARIOS -->
+        <div class="tw" style="margin:0">
+          <div class="th">
+            <span class="th-title">👥 Usuarios y accesos</span>
+            <button class="btn prim sm" onclick="openUsuario(null)">+ Nuevo usuario</button>
+          </div>
+          <table>
+            <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Acciones</th></tr></thead>
+            <tbody id="usr-tbody"><tr><td colspan="4" class="es">Sin usuarios</td></tr></tbody>
+          </table>
+        </div>
+        <!-- IMPRESORA -->
+        <div class="tw" style="margin:0">
+          <div class="th"><span class="th-title">🖨️ Impresora y cajón monedero</span></div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:13px;font-size:13px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-weight:600">Estado</span>
+                <span id="imp-estado" class="badge gray">Sin configurar</span>
+              </div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6" id="imp-resumen">Haz clic en Configurar para ajustar la impresora y el cajón monedero.</div>
+            </div>
+            <button class="btn prim sm" onclick="openImpresora()">⚙️ Configurar impresora y cajón</button>
+            <button class="btn sm" onclick="testImpresora()">🖨️ Imprimir recibo de prueba</button>
+            <button class="btn sm warn_" onclick="abrirCajonManual()">🗄️ Abrir cajón ahora</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /main -->
+</div><!-- /app-shell -->
+
+<!-- ══════ TOAST ══════ -->
+<div id="toast" style="position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:11px 18px;font-size:13px;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,.5);display:none;gap:8px;align-items:center;max-width:340px">
+  <span id="toast-ico" style="font-size:16px"></span>
+  <span id="toast-msg" style="flex:1"></span>
+  <button onclick="document.getElementById('toast').classList.remove('show')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px">✕</button>
+</div>
+
+<!-- ══════ NOTIFICACIÓN VENTA EXITOSA ══════ -->
+<div id="notif-venta" style="position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:8500;display:none;align-items:center;justify-content:center;padding:16px">
+<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:500px;max-width:96vw;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.7);animation:moin .25s ease">
+
+  <!-- Header verde animado -->
+  <div style="background:linear-gradient(135deg,rgba(74,222,128,.18),rgba(99,179,237,.12));border-bottom:1px solid var(--border);padding:22px 24px;text-align:center">
+    <div id="nv-icono" style="font-size:52px;margin-bottom:8px;display:block;animation:nv-pop .4s ease">✅</div>
+    <div style="font-size:20px;font-weight:700;color:var(--success);letter-spacing:-.4px">¡Venta Registrada!</div>
+    <div id="nv-id" style="font-size:12px;color:var(--text3);margin-top:4px;font-family:var(--mono)"></div>
+  </div>
+
+  <!-- Datos de la venta -->
+  <div style="padding:18px 22px 4px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg3);border-radius:9px;padding:10px 13px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Paciente</div>
+        <div id="nv-nombre" style="font-size:14px;font-weight:600;color:var(--text)"></div>
+      </div>
+      <div style="background:var(--bg3);border-radius:9px;padding:10px 13px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Método de pago</div>
+        <div id="nv-metodo" style="font-size:14px;font-weight:600;color:var(--accent)"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg3);border-radius:9px;padding:10px 13px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Total cobrado</div>
+        <div id="nv-total" style="font-size:18px;font-weight:700;color:var(--success);font-family:var(--mono)"></div>
+      </div>
+      <div style="background:var(--bg3);border-radius:9px;padding:10px 13px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Pagado por cliente</div>
+        <div id="nv-pagado" style="font-size:18px;font-weight:700;color:var(--text);font-family:var(--mono)"></div>
+      </div>
+    </div>
+    <!-- Devolución destacada -->
+    <div id="nv-devuelta-box" style="background:rgba(74,222,128,.1);border:2px solid rgba(74,222,128,.4);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-weight:600">💵 Devolver al cliente</div>
+      <div id="nv-devuelta-val" style="font-size:38px;font-weight:700;font-family:var(--mono);color:var(--success);letter-spacing:-1px"></div>
+    </div>
+    <div id="nv-sin-devuelta" style="background:var(--bg3);border-radius:9px;padding:10px 13px;text-align:center;margin-bottom:12px;display:none">
+      <span style="color:var(--text3);font-size:13px">Sin devolución · Pago exacto o por otro método</span>
+    </div>
+  </div>
+
+  <!-- Botones de impresión -->
+  <div style="padding:4px 22px 18px">
+    <div style="font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px">🖨️ ¿Cómo deseas imprimir el recibo?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <button onclick="notifImprimirTiquet()" style="padding:12px 6px;border-radius:10px;border:1px solid rgba(99,179,237,.4);background:rgba(99,179,237,.1);color:var(--accent);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .13s" onmouseover="this.style.background='rgba(99,179,237,.2)'" onmouseout="this.style.background='rgba(99,179,237,.1)'">
+        <span style="font-size:24px">🧻</span>
+        <span>Tiquete</span>
+        <span style="font-size:10px;color:var(--text3);font-weight:400">Impresora térmica</span>
+      </button>
+      <button onclick="notifImprimirNormal('carta')" style="padding:12px 6px;border-radius:10px;border:1px solid rgba(192,132,252,.4);background:rgba(192,132,252,.1);color:var(--purple);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .13s" onmouseover="this.style.background='rgba(192,132,252,.2)'" onmouseout="this.style.background='rgba(192,132,252,.1)'">
+        <span style="font-size:24px">📄</span>
+        <span>Carta</span>
+        <span style="font-size:10px;color:var(--text3);font-weight:400">Impresora normal</span>
+      </button>
+      <button onclick="notifImprimirNormal('a4')" style="padding:12px 6px;border-radius:10px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.1);color:var(--warn);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .13s" onmouseover="this.style.background='rgba(251,191,36,.2)'" onmouseout="this.style.background='rgba(251,191,36,.1)'">
+        <span style="font-size:24px">📋</span>
+        <span>A4</span>
+        <span style="font-size:10px;color:var(--text3);font-weight:400">Impresora normal</span>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="notifImprimirPDF()" style="padding:10px;border-radius:10px;border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.1);color:var(--success);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .13s" onmouseover="this.style.background='rgba(74,222,128,.2)'" onmouseout="this.style.background='rgba(74,222,128,.1)'">
+        <span style="font-size:18px">📥</span> Guardar PDF
+      </button>
+      <button onclick="cerrarNotifVenta()" style="padding:10px;border-radius:10px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .13s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+        <span style="font-size:18px">✕</span> Sin recibo
+      </button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════ MODAL EXCEL / DRIVE ══════ -->
+<div class="mo" id="mo-excel">
+<div class="md" style="width:520px">
+  <div class="md-h"><span>📊 Exportar Excel para Drive</span><button class="xbtn" onclick="closeModal('mo-excel')">✕</button></div>
+  <div class="md-b">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px;text-align:center">
+        <div style="font-size:28px;margin-bottom:6px">📊</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px">Base de datos completa</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Ventas · Inventario · Recetas · Gastos + Resumen</div>
+        <button class="btn prim sm" onclick="exportExcelDrive()" style="width:100%;justify-content:center">⬇️ Descargar .xlsx</button>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px;text-align:center">
+        <div style="font-size:28px;margin-bottom:6px">☁️</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px">Sincronizar con Drive</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Actualiza la hoja de Google Sheets ahora</div>
+        <button class="btn succ sm" onclick="syncAllToDrive();closeModal('mo-excel')" style="width:100%;justify-content:center">🔄 Sync Drive</button>
+      </div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">📋 Hojas incluidas en el Excel</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:12.5px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--success)">✓</span><b>Ventas</b><span style="color:var(--text3)">— todas las transacciones con datos del paciente</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--success)">✓</span><b>Inventario</b><span style="color:var(--text3)">— artículos y stock actual</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--success)">✓</span><b>Recetas</b><span style="color:var(--text3)">— consumo por estudio</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--success)">✓</span><b>Gastos</b><span style="color:var(--text3)">— registro de egresos</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--warn)">★</span><b>Resumen</b><span style="color:var(--text3)">— <b style="color:var(--warn)">NUEVO</b> · totales, utilidad y métricas del mes</span></div>
+      </div>
+    </div>
+    <div class="alrt info" style="font-size:12px">
+      💡 Para carga automática en Drive: configura la URL de Google Apps Script en <b>Configuración → Conectar Google Drive</b>. Una vez conectado, cada venta se sincroniza en tiempo real.
+    </div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-excel')">Cerrar</button>
+    <button class="btn prim" onclick="exportExcelDrive();closeModal('mo-excel')">📊 Exportar ahora</button>
+  </div>
+</div>
+</div>
+
+<style>
+@keyframes nv-pop{0%{transform:scale(0.3);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+#toast.show{display:flex;animation:tin .2s ease}
+</style>
+
+<!-- ══════ MODAL OPCIONES IMPRESIÓN ══════ -->
+<div class="mo" id="mo-imp-opciones">
+<div class="md" style="width:500px">
+  <div class="md-h"><span>🖨️ Imprimir / Compartir Recibo</span><button class="xbtn" onclick="closeModal('mo-imp-opciones')">✕</button></div>
+  <div class="md-b" style="padding:16px">
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Recibo de venta</div>
+        <div style="font-size:15px;font-weight:700" id="imp-opt-nombre"></div>
+        <div style="font-size:12px;color:var(--accent);font-family:var(--mono)" id="imp-opt-id"></div>
+      </div>
+      <div style="font-size:32px">🧾</div>
+    </div>
+
+    <!-- Formato del papel -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">① Elige el formato de papel</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:14px">
+      <div id="fmt-termica" onclick="selFmtImp('termica')" style="border:2px solid var(--accent);background:var(--accent-dim);border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .13s">
+        <div style="font-size:22px;margin-bottom:3px">🧻</div>
+        <div style="font-size:12px;font-weight:600;color:var(--accent)">Tiquete</div>
+        <div style="font-size:10px;color:var(--text3)">Impresora térmica</div>
+        <div style="font-size:10px;color:var(--text3)">58 / 80mm</div>
+      </div>
+      <div id="fmt-carta" onclick="selFmtImp('carta')" style="border:1px solid var(--border);border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .13s">
+        <div style="font-size:22px;margin-bottom:3px">📄</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2)">Carta</div>
+        <div style="font-size:10px;color:var(--text3)">Impresora normal</div>
+        <div style="font-size:10px;color:var(--text3)">8.5 × 11"</div>
+      </div>
+      <div id="fmt-a4" onclick="selFmtImp('a4')" style="border:1px solid var(--border);border-radius:9px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .13s">
+        <div style="font-size:22px;margin-bottom:3px">📋</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text2)">A4</div>
+        <div style="font-size:10px;color:var(--text3)">Impresora normal</div>
+        <div style="font-size:10px;color:var(--text3)">210 × 297mm</div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">② Acción</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <button class="btn prim" onclick="imprimirConImpresora()" style="flex-direction:column;padding:14px 10px;gap:5px;height:auto;align-items:center">
+        <span style="font-size:24px">🖨️</span>
+        <span style="font-size:13px;font-weight:600">Imprimir</span>
+        <span style="font-size:10.5px;opacity:.75">Enviar a impresora</span>
+      </button>
+      <button class="btn" onclick="imprimirComoPDF()" style="flex-direction:column;padding:14px 10px;gap:5px;height:auto;align-items:center;border-color:var(--success);color:var(--success);background:var(--success-dim)">
+        <span style="font-size:24px">📥</span>
+        <span style="font-size:13px;font-weight:600">Guardar PDF</span>
+        <span style="font-size:10.5px;color:rgba(74,222,128,.7)">Descargar archivo</span>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn" onclick="compartirWhatsApp()" style="flex-direction:column;padding:12px 10px;gap:4px;height:auto;align-items:center;border-color:#25D366;color:#25D366;background:rgba(37,211,102,.08)">
+        <span style="font-size:22px">💬</span>
+        <span style="font-size:12px;font-weight:600">WhatsApp</span>
+        <span style="font-size:10px;color:rgba(37,211,102,.7)">Enviar resumen</span>
+      </button>
+      <button class="btn" onclick="copiarResumenRecibo()" style="flex-direction:column;padding:12px 10px;gap:4px;height:auto;align-items:center;border-color:var(--purple);color:var(--purple);background:var(--purple-dim)">
+        <span style="font-size:22px">📋</span>
+        <span style="font-size:12px;font-weight:600">Copiar texto</span>
+        <span style="font-size:10px;color:rgba(192,132,252,.7)">Al portapapeles</span>
+      </button>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6">
+      💡 Para PDF: en el diálogo del navegador elige <b style="color:var(--text2)">"Guardar como PDF"</b> como destino de impresión
+    </div>
+  </div>
+  <div class="md-f"><button class="btn" onclick="closeModal('mo-imp-opciones')">Cancelar</button></div>
+</div>
+</div>
+
+<!-- ══════ MODAL USUARIO ══════ -->
+<div class="mo" id="mo-usuario">
+<div class="md" style="width:520px">
+  <div class="md-h"><span id="mu-title">Nuevo Usuario</span><button class="xbtn" onclick="closeModal('mo-usuario')">✕</button></div>
+  <div class="md-b">
+    <div class="fg c1" style="gap:11px">
+      <div class="fgrp"><label>Nombre completo *</label><input id="u-nombre" placeholder="Ej: Ana García"></div>
+      <div class="fgrp"><label>Nombre de usuario (login) *</label><input id="u-usuario" placeholder="Ej: cajero1" autocomplete="off"></div>
+      <div class="fgrp">
+        <label>Contraseña <span id="u-pass-hint" style="font-weight:400;color:var(--text3)">(mín. 4 caracteres)</span></label>
+        <div style="position:relative">
+          <input id="u-pass" type="password" placeholder="••••••" autocomplete="new-password">
+          <button onclick="var i=document.getElementById('u-pass');i.type=i.type==='password'?'text':'password'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">👁</button>
+        </div>
+      </div>
+      <div class="fgrp">
+        <label>Rol base *</label>
+        <select id="u-rol" onchange="previewRol()">
+          <option value="admin">👑 Administrador — acceso total</option>
+          <option value="caja">🏧 Cajero — solo ventas e historial</option>
+          <option value="personalizado">🎛️ Personalizado — elegir módulos manualmente</option>
+        </select>
+      </div>
+      <!-- Permisos granulares (solo visibles en modo personalizado o admin para ajustar) -->
+      <div id="permisos-custom-wrap" style="display:none">
+        <div style="font-size:10.5px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">🎛️ Permisos por módulo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px" id="permisos-checkboxes">
+          <!-- Se genera dinámicamente -->
+        </div>
+      </div>
+      <div id="rol-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px">
+        <div style="font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Módulos que puede ver</div>
+        <div id="rol-permisos-list" style="font-size:12.5px;display:flex;flex-wrap:wrap;gap:5px"></div>
+      </div>
+    </div>
+    <input type="hidden" id="u-edit-id">
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-usuario')">Cancelar</button>
+    <button class="btn prim" onclick="guardarUsuario()">💾 Guardar usuario</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL IMPRESORA ══════ -->
+<div class="mo" id="mo-impresora">
+<div class="md" style="width:580px">
+  <div class="md-h"><span>🖨️ Impresora de Recibos y Cajón Monedero</span><button class="xbtn" onclick="closeModal('mo-impresora')">✕</button></div>
+  <div class="md-b">
+    <div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(--border)">📄 Datos del recibo impreso</div>
+    <div class="fg" style="margin-bottom:11px">
+      <div class="fgrp"><label>Nombre en el recibo</label><input id="imp-nombre" placeholder="CRX Radiología"></div>
+      <div class="fgrp"><label>Dirección</label><input id="imp-dir" placeholder="Calle 5 # 38-25, Cali"></div>
+    </div>
+    <div class="fg" style="margin-bottom:13px">
+      <div class="fgrp"><label>Teléfono</label><input id="imp-tel" placeholder="+57 2 555 0000"></div>
+      <div class="fgrp"><label>Mensaje al pie</label><input id="imp-footer" placeholder="Gracias por su visita"></div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(--border)">🖨️ Impresora térmica</div>
+    <div class="fg c3" style="margin-bottom:13px">
+      <div class="fgrp"><label>Ancho del papel</label>
+        <select id="imp-ancho">
+          <option value="58">58 mm (rollo pequeño)</option>
+          <option value="80">80 mm (estándar)</option>
+          <option value="110">110 mm (ancho)</option>
+        </select>
+      </div>
+      <div class="fgrp"><label>Copias por venta</label><input id="imp-copias" type="number" min="1" max="3" value="1"></div>
+      <div class="fgrp"><label>Cerrar ventana auto.</label>
+        <select id="imp-autoclose"><option value="1">Sí (recomendado)</option><option value="0">No</option></select>
+      </div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid var(--border)">🗄️ Cajón monedero</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:13px;margin-bottom:13px">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;margin-bottom:9px">
+        <input type="checkbox" id="imp-cajon" style="width:16px;height:16px;accent-color:var(--accent2)">
+        Abrir cajón automáticamente al procesar cada venta
+      </label>
+      <div style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:10px">
+        Usa <b style="color:var(--text2)">Web Serial API</b> (Chrome/Edge) o el puerto <b style="color:var(--text2)">RJ-11</b> de la impresora.<br>
+        Conecta el cable RJ-11 del cajón al puerto DK/Cash Drawer de tu impresora térmica.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm warn_" onclick="abrirCajonManual()">🗄️ Probar apertura del cajón</button>
+        <button class="btn sm" onclick="testImpresora()">🖨️ Imprimir recibo de prueba</button>
+      </div>
+    </div>
+    <div class="alrt info" style="font-size:12px;line-height:1.7">
+      <b>Instalación paso a paso:</b><br>
+      1. Conecta la impresora térmica (Epson TM, Bixolon, Sewoo, Star, etc.) por USB al PC.<br>
+      2. Instala el driver desde el CD o página del fabricante. En Windows aparecerá en "Impresoras".<br>
+      3. Al imprimir un recibo se abre el diálogo del navegador — selecciona tu impresora y desactiva márgenes.<br>
+      4. Para cajón: conecta el cable RJ-11 del cajón al puerto "DK" o "Cash Drawer" de la impresora.<br>
+      5. Activa la casilla de cajón y haz clic en "Probar apertura" para verificar.
+    </div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-impresora')">Cancelar</button>
+    <button class="btn prim" onclick="saveImpresora();closeModal('mo-impresora')">💾 Guardar configuración</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL VENTA ══════ -->
+<div class="mo" id="mo-venta">
+<div class="md" style="width:680px">
+  <div class="md-h">
+    <span id="mv-title">Nueva Venta</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="mic-status" style="font-size:11px;color:var(--text3)"></span>
+      <button class="btn sm" id="btn-mic-voz" onclick="toggleDictado()" title="Dictado por voz">🎙 Voz</button>
+      <button class="xbtn" onclick="closeModal('mo-venta')">✕</button>
+    </div>
+  </div>
+  <div class="md-b">
+    <div id="inv-warn-venta" class="alrt dang" style="display:none">⚠️ Stock insuficiente para este estudio.</div>
+    <div class="alrt info" id="voz-hint" style="display:none">🎙 Habla el campo y su valor. Ej: "ID venta ID1", "Nombre Ana García", "ID paciente 12345"</div>
+
+    <!-- SECCIÓN: Datos de la venta -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">📋 Datos de la venta</div>
+    <div class="fg c4" style="margin-bottom:13px">
+      <div class="fgrp"><label>ID Venta <span style="color:var(--text3);font-weight:400">(auto)</span></label><div class="mic-wrap"><input id="v-id" placeholder="Auto" readonly style="color:var(--accent);font-family:var(--mono)"><button class="mic-btn" onclick="micField('v-id')" title="Dictar">🎙</button></div></div>
+      <div class="fgrp"><label>Fecha *</label><input id="v-fecha" type="date"></div>
+      <div class="fgrp full" style="grid-column:span 2"><label>Clínica procedencia</label><div class="mic-wrap"><input id="v-clinica" placeholder="Ej: Clínica Valle"><button class="mic-btn" onclick="micField('v-clinica')">🎙</button></div></div>
+    </div>
+
+    <!-- SECCIÓN: Datos del paciente -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">👤 Datos del paciente</div>
+    <div class="fg" style="margin-bottom:11px">
+      <div class="fgrp"><label>Nombre Paciente *</label><div class="mic-wrap"><input id="v-nombre" placeholder="Nombre completo"><button class="mic-btn" onclick="micField('v-nombre')">🎙</button></div></div>
+      <div class="fgrp"><label>ID Paciente (CC/TI/CE) *</label><div class="mic-wrap"><input id="v-cedula" placeholder="Número de identificación"><button class="mic-btn" onclick="micField('v-cedula')">🎙</button></div></div>
+      <div class="fgrp"><label>Fecha Nacimiento</label><input id="v-nacimiento" type="date" onchange="calcEdad()" oninput="calcEdad()"></div>
+      <div class="fgrp"><label>Edad <span style="color:var(--text3);font-weight:400">(auto)</span></label><input id="v-edad" placeholder="Auto" style="color:var(--accent);font-family:var(--mono)" oninput=""></div>
+    </div>
+    <div class="fg c3" style="margin-bottom:11px">
+      <div class="fgrp"><label>Género</label>
+        <select id="v-genero">
+          <option value="">— Sin especificar —</option>
+          <option>Masculino</option>
+          <option>Femenino</option>
+          <option>Otro</option>
+          <option>Prefiero no decir</option>
+        </select>
+      </div>
+      <div class="fgrp"><label>Teléfono</label><div class="mic-wrap"><input id="v-telefono" placeholder="+57 300 000 0000"><button class="mic-btn" onclick="micField('v-telefono')">🎙</button></div></div>
+      <div class="fgrp"><label>Correo electrónico</label><div class="mic-wrap"><input id="v-email" type="email" placeholder="correo@ejemplo.com"><button class="mic-btn" onclick="micField('v-email')">🎙</button></div></div>
+    </div>
+    <div class="fg" style="margin-bottom:13px">
+      <div class="fgrp full"><label>Dirección</label><div class="mic-wrap"><input id="v-direccion" placeholder="Calle / Carrera / Barrio, Ciudad"><button class="mic-btn" onclick="micField('v-direccion')">🎙</button></div></div>
+    </div>
+
+    <!-- SECCIÓN: Estudios (carrito multi-item) -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">🩻 Estudios / Servicios</div>
+
+    <!-- Agregar item -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px;margin-bottom:10px">
+      <div class="fg c4" style="gap:8px;align-items:flex-end">
+        <div class="fgrp" style="grid-column:span 2">
+          <label>Estudio a agregar</label>
+          <select id="v-item-estudio" onchange="autoFillPrecio()">
+            <option value="">-- Seleccionar --</option>
+          </select>
+        </div>
+        <div class="fgrp">
+          <label>Formato</label>
+          <select id="v-item-formato"><option>Digital</option><option>Físico</option><option>Ambos</option></select>
+        </div>
+        <div class="fgrp">
+          <label>Cant.</label>
+          <input id="v-item-cant" type="number" min="1" value="1" style="text-align:center">
+        </div>
+        <div class="fgrp">
+          <label>Precio unit. (COP)</label>
+          <input id="v-item-precio" type="number" min="0" placeholder="0">
+        </div>
+        <div class="fgrp" style="display:flex;align-items:flex-end">
+          <button class="btn prim sm" onclick="agregarItem()" style="width:100%;justify-content:center;padding:8px 0">+ Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de items -->
+    <div id="v-items-list" style="margin-bottom:10px;display:flex;flex-direction:column;gap:4px">
+      <!-- items dinámicos -->
+    </div>
+    <div id="v-items-empty" style="text-align:center;padding:14px;color:var(--text3);font-size:12.5px;background:var(--bg3);border:1px dashed var(--border2);border-radius:8px;margin-bottom:10px">
+      Sin estudios agregados. Selecciona uno arriba y haz clic en "+ Agregar".
+    </div>
+
+    <!-- Consumo de inventario -->
+    <div id="consumo-preview" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px;margin-bottom:10px">
+      <div style="font-size:10.5px;font-weight:600;color:var(--text2);margin-bottom:7px;text-transform:uppercase;letter-spacing:.05em">Consumo de inventario al guardar</div>
+      <div id="consumo-list" style="font-size:12.5px;display:flex;flex-direction:column;gap:5px"></div>
+    </div>
+    <div id="inv-warn-venta" class="alrt dang" style="display:none">⚠️ Stock insuficiente para uno o más estudios.</div>
+
+    <!-- SECCIÓN: Evidencia fotográfica -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">📸 Evidencia fotográfica (orden de servicio)</div>
+    <div class="fg" style="margin-bottom:13px">
+      <div class="fgrp">
+        <label>Foto 1 — Orden / Documento</label>
+        <div style="position:relative">
+          <input type="file" id="v-foto1" accept="image/*" capture="environment" onchange="previewFoto(this,'v-foto1-prev')" style="display:none">
+          <div id="v-foto1-prev" onclick="document.getElementById('v-foto1').click()" style="width:100%;height:110px;background:var(--bg3);border:2px dashed var(--border);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:6px;color:var(--text3);font-size:12px;overflow:hidden;position:relative;transition:border .13s">
+            <span style="font-size:24px">📷</span>
+            <span>Clic para cargar o tomar foto</span>
+          </div>
+          <button onclick="clearFoto('v-foto1','v-foto1-prev')" style="position:absolute;top:5px;right:5px;background:var(--danger-dim);border:1px solid var(--danger);border-radius:5px;color:var(--danger);cursor:pointer;font-size:11px;padding:2px 7px;display:none" id="v-foto1-clear">✕</button>
+        </div>
+      </div>
+      <div class="fgrp">
+        <label>Foto 2 — Evidencia adicional</label>
+        <div style="position:relative">
+          <input type="file" id="v-foto2" accept="image/*" capture="environment" onchange="previewFoto(this,'v-foto2-prev')" style="display:none">
+          <div id="v-foto2-prev" onclick="document.getElementById('v-foto2').click()" style="width:100%;height:110px;background:var(--bg3);border:2px dashed var(--border);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:6px;color:var(--text3);font-size:12px;overflow:hidden;position:relative;transition:border .13s">
+            <span style="font-size:24px">📷</span>
+            <span>Clic para cargar o tomar foto</span>
+          </div>
+          <button onclick="clearFoto('v-foto2','v-foto2-prev')" style="position:absolute;top:5px;right:5px;background:var(--danger-dim);border:1px solid var(--danger);border-radius:5px;color:var(--danger);cursor:pointer;font-size:11px;padding:2px 7px;display:none" id="v-foto2-clear">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pago -->
+    <div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">💳 Pago</div>
+    <div class="fg c4" style="margin-bottom:4px">
+      <div class="fgrp">
+        <label>Método de Pago *</label>
+        <select id="v-metodo"><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Tarjeta débito</option><option>Tarjeta crédito</option><option>Transferencia</option><option>Seguro médico</option></select>
+      </div>
+      <div class="fgrp">
+        <label>Total a pagar</label>
+        <div id="v-valor-display" style="padding:8px 11px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">$ 0</div>
+        <input type="hidden" id="v-valor">
+      </div>
+      <div class="fgrp">
+        <label>Monto Pagado <span style="color:var(--text3);font-weight:400">(efectivo)</span></label>
+        <div class="mic-wrap"><input id="v-pagado" type="number" min="0" placeholder="0" oninput="calcDevuelta()"><button class="mic-btn" onclick="micField('v-pagado')">🎙</button></div>
+      </div>
+      <div class="fgrp">
+        <label>Devuelta</label>
+        <div style="padding:8px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;font-family:var(--mono);font-size:16px;font-weight:700;transition:all .2s" id="v-devuelta">$ 0</div>
+      </div>
+    </div>
+    <!-- Alerta devolución en tiempo real -->
+    <div id="v-devuelta-alert" style="display:none;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">💵</span>
+      <div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600" id="v-devuelta-lbl">Devolver al cliente:</div>
+        <div style="font-size:15px;font-weight:700;color:var(--success);font-family:var(--mono)" id="v-devuelta-monto"></div>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:4px">
+      <div class="fgrp full"><label>Notas</label><div class="mic-wrap"><input id="v-notas" placeholder="Observaciones generales..."><button class="mic-btn" onclick="micField('v-notas')">🎙</button></div></div>
+    </div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-venta')">Cancelar</button>
+    <button class="btn prim" onclick="guardarVenta()">💾 Guardar Venta</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL INVENTARIO ══════ -->
+<div class="mo" id="mo-inv">
+<div class="md">
+  <div class="md-h"><span id="mi-title">Nuevo Artículo</span><button class="xbtn" onclick="closeModal('mo-inv')">✕</button></div>
+  <div class="md-b">
+    <div class="fg" style="margin-bottom:11px">
+      <div class="fgrp"><label>ID Artículo *</label><input id="i-id" placeholder="Ej: ART-001"></div>
+      <div class="fgrp"><label>Nombre Artículo *</label><input id="i-nombre" placeholder="Ej: Gel ecográfico"></div>
+    </div>
+    <div class="fg">
+      <div class="fgrp"><label>Stock Actual *</label><input id="i-stock" type="number" min="0" placeholder="0"></div>
+      <div class="fgrp"><label>Punto de Reorden *</label><input id="i-min" type="number" min="0" placeholder="5"></div>
+    </div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-inv')">Cancelar</button>
+    <button class="btn prim" onclick="guardarInv()">💾 Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL AJUSTAR STOCK ══════ -->
+<div class="mo" id="mo-stock">
+<div class="md" style="width:360px">
+  <div class="md-h"><span id="ms-title">Ajustar Stock</span><button class="xbtn" onclick="closeModal('mo-stock')">✕</button></div>
+  <div class="md-b">
+    <div class="fgrp" style="margin-bottom:11px">
+      <label>Nuevo stock</label><input type="number" id="stock-nuevo" min="0" placeholder="0">
+    </div>
+    <div class="fgrp">
+      <label>Nota de ajuste</label><input id="stock-nota" placeholder="Ej: compra proveedor, ajuste inventario...">
+    </div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-stock')">Cancelar</button>
+    <button class="btn prim" onclick="confirmarStock()">✅ Aplicar</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL RECETA ══════ -->
+<div class="mo" id="mo-receta">
+<div class="md">
+  <div class="md-h"><span id="mr-title">Nueva Receta</span><button class="xbtn" onclick="closeModal('mo-receta')">✕</button></div>
+  <div class="md-b">
+    <div class="fg c1" style="gap:10px">
+      <div class="fgrp"><label>ID Receta *</label><input id="r-id" placeholder="Ej: REC-001"></div>
+      <div class="fgrp"><label>Nombre Estudio * <span style="font-weight:400;color:var(--text3);text-transform:none">(debe coincidir con Ventas)</span></label><input id="r-estudio" placeholder="Ej: Panorámica, Tomografía..."></div>
+      <div class="fgrp"><label>Artículo que gasta *</label><select id="r-articulo"><option value="">-- Seleccionar --</option></select></div>
+      <div class="fgrp"><label>Cantidad que se gasta por estudio *</label><input id="r-cantidad" type="number" min="1" step="1" placeholder="1"></div>
+    </div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-receta')">Cancelar</button>
+    <button class="btn prim" onclick="guardarReceta()">💾 Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════ MODAL GASTO ══════ -->
+<div class="mo" id="mo-gasto">
+<div class="md">
+  <div class="md-h"><span id="mg-title">Nuevo Gasto</span><button class="xbtn" onclick="closeModal('mo-gasto')">✕</button></div>
+  <div class="md-b">
+    <div class="fg" style="margin-bottom:11px">
+      <div class="fgrp"><label>ID Gasto *</label><input id="g-id" placeholder="Ej: G-001"></div>
+      <div class="fgrp"><label>Fecha *</label><input id="g-fecha" type="date"></div>
+    </div>
+    <div class="fg" style="margin-bottom:11px">
+      <div class="fgrp"><label>Concepto *</label>
+        <select id="g-concepto">
+          <option>Comida / Alimentación</option><option>Servicios públicos</option><option>Nómina</option>
+          <option>Insumos médicos</option><option>Mantenimiento equipos</option><option>Arriendo</option>
+          <option>Transporte</option><option>Marketing</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="fgrp"><label>Monto (COP) *</label><input id="g-monto" type="number" min="0" placeholder="0"></div>
+    </div>
+    <div class="fgrp"><label>Comprobante / Referencia</label><input id="g-comprobante" placeholder="Nro. factura, recibo..."></div>
+  </div>
+  <div class="md-f">
+    <button class="btn" onclick="closeModal('mo-gasto')">Cancelar</button>
+    <button class="btn prim" onclick="guardarGasto()">💾 Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL VER VENTA -->
+<div class="mo" id="mo-ver-venta">
+<div class="md" style="width:440px">
+  <div class="md-h"><span>Detalle de Venta</span><button class="xbtn" onclick="closeModal('mo-ver-venta')">✕</button></div>
+  <div class="md-b" id="ver-venta-body"></div>
+  <div class="md-f"><button class="btn" onclick="closeModal('mo-ver-venta')">Cerrar</button></div>
+</div>
+</div>
+
+<!-- ══════ MODAL GOOGLE DRIVE GUIDE ══════ -->
+<div class="mo" id="mo-drive">
+<div class="md" style="width:680px">
+  <div class="md-h"><span>☁️ Conectar base de datos en Google Drive</span><button class="xbtn" onclick="closeModal('mo-drive')">✕</button></div>
+  <div class="md-b" style="padding:0">
+    <!-- Steps nav -->
+    <div style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto">
+      <div id="dt-1" class="drive-tab active" onclick="driveStep(1)">1. Preparar</div>
+      <div id="dt-2" class="drive-tab" onclick="driveStep(2)">2. Apps Script</div>
+      <div id="dt-3" class="drive-tab" onclick="driveStep(3)">3. Publicar</div>
+      <div id="dt-4" class="drive-tab" onclick="driveStep(4)">4. Conectar</div>
+      <div id="dt-5" class="drive-tab" onclick="driveStep(5)">5. Probar</div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="ds-1" class="drive-step active">
+      <div class="ds-icon">📁</div>
+      <h3>Paso 1 — Crear la hoja de cálculo en Google Drive</h3>
+      <ol class="step-list">
+        <li>Abre <a href="https://drive.google.com" target="_blank" style="color:var(--accent)">drive.google.com</a> con tu cuenta de Google.</li>
+        <li>Haz clic en <b>+ Nuevo → Hojas de cálculo de Google</b>.</li>
+        <li>Nómbrala: <code>CRX_Radiologia_DB</code></li>
+        <li>En la hoja verás la pestaña <b>"Hoja 1"</b> al fondo. Renómbrala a <code>Ventas</code> (doble clic sobre el nombre).</li>
+        <li>Crea 3 hojas adicionales haciendo clic en el <b>+</b> y nombra cada una: <code>Inventario</code>, <code>Recetas</code>, <code>Gastos</code>.</li>
+        <li>En la hoja <b>Ventas</b>, escribe en la fila 1 estos encabezados (cada uno en su propia columna A→P):<br>
+          <code style="font-size:11px">ID_Venta | Fecha | Nombre | ID_Paciente | Genero | Telefono | Email | Direccion | Nacimiento | Edad | Clinica | Estudio | Formato | Metodo_Pago | Valor | Notas</code>
+        </li>
+        <li>En la hoja <b>Inventario</b>: <code>ID | Nombre | Stock | PuntoReorden</code></li>
+        <li>En la hoja <b>Recetas</b>: <code>ID | Estudio | ArticuloID | ArticuloNombre | Cantidad</code></li>
+        <li>En la hoja <b>Gastos</b>: <code>ID | Fecha | Concepto | Monto | Comprobante</code></li>
+      </ol>
+      <div class="step-tip">💡 Guarda la URL de la hoja. La necesitarás en el Paso 4. Tiene esta forma: <code>https://docs.google.com/spreadsheets/d/<b>TU_ID_AQUI</b>/edit</code></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn prim sm" onclick="driveStep(2)">Siguiente →</button></div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="ds-2" class="drive-step">
+      <div class="ds-icon">⚙️</div>
+      <h3>Paso 2 — Crear el Apps Script (backend gratuito)</h3>
+      <ol class="step-list">
+        <li>Con la hoja abierta, ve al menú <b>Extensiones → Apps Script</b>.</li>
+        <li>Se abrirá el editor. Borra todo el código que hay y pega este:</li>
+      </ol>
+      <div class="code-block" id="apps-script-code">const SS = SpreadsheetApp.getActiveSpreadsheet();
+
+// ── Cabeceras CORS — necesarias para fetch desde GitHub Pages ──
+function setCORS(output) {
+  return output
+    .setMimeType(ContentService.MimeType.JSON);
+  // Nota: Apps Script maneja CORS automáticamente cuando el script
+  // está publicado como "Cualquier usuario (incluso anónimos)"
+}
+
+function doPost(e) {
+  try {
+    const raw = e.postData ? e.postData.contents : '{}';
+    const data = JSON.parse(raw);
+    const sheet = SS.getSheetByName(data.sheet);
+    if (!sheet) return res({ok:false, error:'Hoja no encontrada: '+data.sheet});
+    if (data.action === 'append') {
+      sheet.appendRow(data.row);
+      return res({ok:true});
+    }
+    if (data.action === 'overwrite') {
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);
+      if (data.rows && data.rows.length > 0) {
+        data.rows.forEach(r => sheet.appendRow(r));
+      }
+      return res({ok:true, written: data.rows ? data.rows.length : 0});
+    }
+    if (data.action === 'read') {
+      return res({ok:true, data: sheet.getDataRange().getValues()});
+    }
+    return res({ok:false, error:'Acción desconocida: '+data.action});
+  } catch(err) {
+    return res({ok:false, error:err.toString()});
+  }
+}
+
+function doGet(e) {
+  try {
+    const sheetName = e.parameter && e.parameter.sheet;
+    if (sheetName) {
+      const sheet = SS.getSheetByName(sheetName);
+      if (!sheet) return res({ok:false, error:'Hoja no encontrada: '+sheetName});
+      const values = sheet.getDataRange().getValues();
+      return res({ok:true, data: values, rows: values.length});
+    }
+    // Ping de prueba de conexión
+    return res({ok:true, msg:'CRX API v4 activa ✓', sheets: SS.getSheets().map(s=>s.getName())});
+  } catch(err) {
+    return res({ok:false, error:err.toString()});
+  }
+}
+
+function res(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+      <button class="btn sm" onclick="copyCode()" style="margin-top:8px">📋 Copiar código</button>
+      <div class="step-tip">💡 Este script convierte tu hoja en una API gratuita. La clave para que funcione desde GitHub Pages es publicarlo como <b>"Cualquier usuario"</b> en el Paso 3.</div>
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
+        <button class="btn sm" onclick="driveStep(1)">← Anterior</button>
+        <button class="btn prim sm" onclick="driveStep(3)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="ds-3" class="drive-step">
+      <div class="ds-icon">🚀</div>
+      <h3>Paso 3 — Publicar el script como aplicación web</h3>
+      <ol class="step-list">
+        <li>En el editor de Apps Script, haz clic en <b>Guardar</b> (Ctrl+S o ícono de disquete).</li>
+        <li>Haz clic en el botón azul <b>"Implementar"</b> → <b>"Nueva implementación"</b>.</li>
+        <li>En "Tipo" selecciona <b>Aplicación web</b>.</li>
+        <li>Configura <b>exactamente así</b> (cualquier otra opción causará error CORS):<br>
+          <div style="margin:8px 0;padding:12px;background:var(--bg4);border-radius:8px;font-size:12.5px;display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--success);font-size:14px">✓</span><span><b>Descripción:</b> CRX API v4</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--success);font-size:14px">✓</span><span><b>Ejecutar como:</b> <b style="color:var(--accent)">Yo (tu correo de Google)</b></span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--warn);font-size:16px">⚠</span><span><b>Quién tiene acceso:</b> <b style="color:var(--warn)">Cualquier usuario (incluso anónimos)</b> ← CRÍTICO</span></div>
+          </div>
+        </li>
+        <li>Clic en <b>Implementar</b>. Google pedirá autorización — acepta todos los permisos.</li>
+        <li>Copia la <b>URL de la aplicación web</b>:<br>
+          <code style="font-size:11px;word-break:break-all;background:var(--bg4);padding:4px 8px;border-radius:4px;display:block;margin-top:5px">https://script.google.com/macros/s/XXXXXXXXXXXXXXXXXXXXXXXX/exec</code>
+        </li>
+      </ol>
+      <div class="step-tip" style="margin-top:10px">
+        ⚠️ <b>Si cambiaste el código después:</b> debes crear una <b>nueva implementación</b> (no editar la existente). Clic en Implementar → <b>Administrar implementaciones</b> → Nueva → copiar la nueva URL.<br><br>
+        🔍 <b>Si "Probar conexión" da error CORS:</b> el acceso NO está en "Cualquier usuario". Crea una nueva implementación con el acceso correcto y actualiza la URL en la app.
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
+        <button class="btn sm" onclick="driveStep(2)">← Anterior</button>
+        <button class="btn prim sm" onclick="driveStep(4)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div id="ds-4" class="drive-step">
+      <div class="ds-icon">🔗</div>
+      <h3>Paso 4 — Conectar esta app con tu Google Sheet</h3>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:14px">Pega aquí la URL del script que copiaste en el paso anterior:</p>
+      <div class="fgrp" style="margin-bottom:12px">
+        <label>URL del Apps Script (endpoint)</label>
+        <input id="drive-url" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:12px">
+      </div>
+      <button class="btn prim" onclick="saveDriveUrl()" style="width:100%;justify-content:center;margin-bottom:10px">💾 Guardar y activar sincronización</button>
+      <div id="drive-status" style="display:none" class="alrt info">✅ URL guardada. La app sincronizará con Google Drive automáticamente.</div>
+      <div class="step-tip">💡 Una vez guardado, cada nueva venta, cambio de inventario o gasto se enviará automáticamente a tu hoja de cálculo en Drive. También podrás hacer clic en "☁️ Sincronizar todo" para subir todos los datos existentes.</div>
+      <div style="margin-top:12px">
+        <button class="btn succ" onclick="syncAllToDrive()" style="width:100%;justify-content:center">☁️ Sincronizar TODOS los datos ahora</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
+        <button class="btn sm" onclick="driveStep(3)">← Anterior</button>
+        <button class="btn prim sm" onclick="driveStep(5)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div id="ds-5" class="drive-step">
+      <div class="ds-icon">✅</div>
+      <h3>Paso 5 — Verificar que funciona</h3>
+      <ol class="step-list">
+        <li>Haz clic en <b>"☁️ Sincronizar TODOS los datos"</b> en el paso anterior.</li>
+        <li>Abre tu hoja <b>CRX_Radiologia_DB</b> en Google Drive.</li>
+        <li>Verifica que las hojas <b>Ventas</b>, <b>Inventario</b>, <b>Recetas</b> y <b>Gastos</b> tienen los datos.</li>
+        <li>Registra una venta nueva en la app y verifica que aparece en la hoja en segundos.</li>
+      </ol>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;margin:12px 0">
+        <div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Estado de sincronización</div>
+        <div id="sync-status-detail" style="font-size:13px;color:var(--text3)">Sin configurar aún.</div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn sm" onclick="testDriveConnection()">🔍 Probar conexión</button>
+          <button class="btn succ sm" onclick="syncAllToDrive()">☁️ Sincronizar todo</button>
+        </div>
+      </div>
+      <div class="step-tip">📌 <b>Recomendación:</b> Comparte la hoja con tu equipo en modo solo lectura para que puedan consultar datos sin editar. Ve a la hoja → Compartir → y escribe los correos.</div>
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
+        <button class="btn sm" onclick="driveStep(4)">← Anterior</button>
+        <button class="btn prim sm" onclick="closeModal('mo-drive')">¡Listo! Cerrar guía</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<style>
+.drive-tab{padding:10px 16px;font-size:12.5px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .13s}
+.drive-tab:hover{color:var(--text2)}
+.drive-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.drive-step{display:none;padding:20px}
+.drive-step.active{display:block}
+.ds-icon{font-size:32px;margin-bottom:10px}
+.drive-step h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.step-list{padding-left:18px;display:flex;flex-direction:column;gap:9px;font-size:13px;color:var(--text2);line-height:1.6}
+.step-list li{padding-left:4px}
+.step-list b{color:var(--text);font-weight:600}
+.step-list code{background:var(--bg4);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:11.5px;color:var(--accent)}
+.step-tip{background:var(--warn-dim);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--warn);margin-top:12px;line-height:1.5}
+.code-block{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:14px;font-family:var(--mono);font-size:11.5px;color:#a8d8a8;white-space:pre;overflow-x:auto;max-height:220px;overflow-y:auto;line-height:1.6}
+</style>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  GOOGLE DRIVE — SINCRONIZACIÓN BIDIRECCIONAL v4
+// ══════════════════════════════════════════════════════════
+
+// ── UI helpers ──
+function driveStep(n){
+  for(let i=1;i<=5;i++){
+    document.getElementById('dt-'+i).classList.toggle('active',i===n);
+    document.getElementById('ds-'+i).classList.toggle('active',i===n);
+  }
+}
+function copyCode(){
+  const code=document.getElementById('apps-script-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>toast('Código copiado','📋')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Código copiado','📋');
+  });
+}
+
+// ── Indicador de estado en topbar ──
+function setSyncStatus(state){
+  // state: 'off' | 'ok' | 'syncing' | 'error'
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  const btn=document.getElementById('btn-sync-now');
+  const ind=document.getElementById('sync-indicator');
+  if(!dot)return;
+  const map={
+    off:  {color:'var(--text3)',  text:'Sin Drive',   bg:'var(--bg3)'},
+    ok:   {color:'var(--success)',text:'Drive ✓',     bg:'var(--success-dim)'},
+    syncing:{color:'var(--warn)', text:'Sincronizando…',bg:'var(--warn-dim)'},
+    error:{color:'var(--danger)', text:'Drive Error', bg:'var(--danger-dim)'},
+  };
+  const s=map[state]||map.off;
+  dot.style.background=s.color;
+  lbl.textContent=s.text;
+  ind.style.color=s.color;
+  ind.style.background=s.bg;
+  ind.style.borderColor=s.color;
+  btn.style.display=(state==='ok'||state==='error')?'inline-flex':'none';
+}
+
+// ── Guardar URL ──
+function saveDriveUrl(){
+  const url=document.getElementById('drive-url').value.trim();
+  if(!url||!url.startsWith('https://')){toast('URL inválida','❌');return;}
+  DB.config.driveUrl=url;
+  DB.config.driveLastSync=null; // forzar descarga en próximo login
+  save();
+  document.getElementById('drive-status').style.display='flex';
+  document.getElementById('sync-status-detail').innerHTML=
+    '<span style="color:var(--success)">✅ URL configurada:</span> <code style="font-size:11px;color:var(--accent)">'+url.slice(0,60)+'...</code>';
+  toast('Drive configurado. Sincronizando…','☁️');
+  setSyncStatus('syncing');
+  syncAllToDrive();
+}
+
+// ── POST a Drive ──
+// Apps Script deployado como "Cualquier usuario" acepta no-cors
+// El POST llega aunque no podamos leer la respuesta (opaque response)
+async function drivePost(payload){
+  const url=DB.config.driveUrl;
+  if(!url)return null;
+  try{
+    // Content-Type text/plain evita preflight CORS que bloquea Apps Script
+    await fetch(url,{
+      method:'POST',
+      mode:'no-cors',
+      body:JSON.stringify(payload),
+      headers:{'Content-Type':'text/plain'}
+    });
+    return {ok:true}; // no-cors siempre "funciona" si llega el fetch
+  }catch(e){
+    console.warn('drivePost error:',e);
+    return null;
+  }
+}
+
+// ── GET desde Drive ──
+async function driveGet(sheet){
+  const url=DB.config.driveUrl;
+  if(!url)return null;
+  try{
+    // GET con mode cors — Apps Script responde con CORS si el script está bien publicado
+    const r=await fetch(url+'?sheet='+encodeURIComponent(sheet)+'&t='+Date.now(),{
+      method:'GET',
+      mode:'cors',
+      cache:'no-store'
+    });
+    if(r.ok){
+      const d=await r.json();
+      return d.ok?d.data:null;
+    }
+  }catch(_){}
+  return null;
+}
+
+// ── Sincronizar: subir TODO a Drive ──
+async function syncAllToDrive(){
+  if(!DB.config.driveUrl){toast('Configura la URL de Drive primero','⚠️');return;}
+  setSyncStatus('syncing');
+  const vRows=DB.ventas.map(v=>[v.id,v.fecha,v.nombre,v.cedula,v.genero||'',v.telefono||'',v.email||'',v.direccion||'',v.nacimiento||'',v.edad||'',v.clinica||'',v.estudio,v.formato,v.metodo,v.valor,v.notas||'']);
+  const iRows=DB.inventario.map(i=>[i.id,i.nombre,i.stock,i.min]);
+  const rRows=DB.recetas.map(r=>[r.id,r.estudio,r.articulo,r.artNombre,r.cantidad]);
+  const gRows=DB.gastos.map(g=>[g.id,g.fecha,g.concepto,g.monto,g.comprobante||'']);
+  try{
+    await Promise.all([
+      drivePost({action:'overwrite',sheet:'Ventas',rows:vRows}),
+      drivePost({action:'overwrite',sheet:'Inventario',rows:iRows}),
+      drivePost({action:'overwrite',sheet:'Recetas',rows:rRows}),
+      drivePost({action:'overwrite',sheet:'Gastos',rows:gRows}),
+    ]);
+    DB.config.driveLastSync=new Date().toISOString();
+    save();
+    setSyncStatus('ok');
+    toast('✅ Datos sincronizados con Drive','☁️');
+    _updateSyncDetail();
+  }catch(e){
+    setSyncStatus('error');
+    toast('Error al sincronizar con Drive','❌');
+  }
+}
+
+// ── Descarga datos de Drive y fusiona con local ──
+async function pullFromDrive(){
+  if(!DB.config.driveUrl)return false;
+  setSyncStatus('syncing');
+  toast('Descargando datos de Drive…','☁️');
+  let updated=false;
+  try{
+    // Descargar Ventas
+    const vData=await driveGet('Ventas');
+    if(vData&&vData.length>1){
+      const remoteVentas=vData.slice(1).map(r=>({
+        id:r[0],fecha:r[1],nombre:r[2],cedula:r[3],genero:r[4],
+        telefono:r[5],email:r[6],direccion:r[7],nacimiento:r[8],
+        edad:r[9],clinica:r[10],estudio:r[11],formato:r[12],
+        metodo:r[13],valor:Number(r[14]),notas:r[15]||''
+      })).filter(v=>v.id);
+      // Fusionar: priorizar Drive, mantener locales no en Drive
+      const driveIds=new Set(remoteVentas.map(v=>v.id));
+      const soloLocal=DB.ventas.filter(v=>!driveIds.has(v.id));
+      DB.ventas=[...remoteVentas,...soloLocal];
+      updated=true;
+    }
+    // Descargar Inventario
+    const iData=await driveGet('Inventario');
+    if(iData&&iData.length>1){
+      DB.inventario=iData.slice(1).map(r=>({id:r[0],nombre:r[1],stock:Number(r[2]),min:Number(r[3])})).filter(i=>i.id);
+      updated=true;
+    }
+    // Descargar Recetas
+    const rData=await driveGet('Recetas');
+    if(rData&&rData.length>1){
+      DB.recetas=rData.slice(1).map(r=>({id:r[0],estudio:r[1],articulo:r[2],artNombre:r[3],cantidad:Number(r[4])})).filter(r=>r.id);
+      updated=true;
+    }
+    // Descargar Gastos
+    const gData=await driveGet('Gastos');
+    if(gData&&gData.length>1){
+      const remoteGastos=gData.slice(1).map(r=>({id:r[0],fecha:r[1],concepto:r[2],monto:Number(r[3]),comprobante:r[4]||''})).filter(g=>g.id);
+      const driveGIds=new Set(remoteGastos.map(g=>g.id));
+      const soloLocalG=DB.gastos.filter(g=>!driveGIds.has(g.id));
+      DB.gastos=[...remoteGastos,...soloLocalG];
+      updated=true;
+    }
+    if(updated){
+      save();
+      DB.config.driveLastSync=new Date().toISOString();
+      save();
+      setSyncStatus('ok');
+      toast('✅ Datos actualizados desde Drive','☁️');
+      _updateSyncDetail();
+      return true;
+    }else{
+      // Drive no pudo responder con datos (CORS local) — subir lo local
+      setSyncStatus('ok');
+      return false;
+    }
+  }catch(e){
+    setSyncStatus('error');
+    toast('No se pudo descargar de Drive','⚠️');
+    return false;
+  }
+}
+
+// ── Sincronización al hacer login ──
+async function syncOnLogin(){
+  if(!DB.config.driveUrl){setSyncStatus('off');return;}
+  setSyncStatus('syncing');
+  const pulled=await pullFromDrive();
+  if(!pulled){
+    // Si CORS bloqueó la descarga (archivo local), subir datos locales
+    await syncAllToDrive();
+  }
+  // Refrescar pantalla con datos nuevos
+  renderSection(SESSION.rol?'dashboard':'ventas');
+}
+
+// ── Sincronizar manualmente desde el botón ☁️ del topbar ──
+async function syncNow(){
+  if(!DB.config.driveUrl){toast('Configura Drive primero','⚠️');return;}
+  const pulled=await pullFromDrive();
+  if(pulled){
+    renderSection(document.querySelector('.ni.active')?.dataset?.sec||'dashboard');
+  }
+  await syncAllToDrive();
+}
+
+// ── Auto-sync cada 5 minutos mientras está abierta ──
+setInterval(()=>{
+  if(SESSION.user&&DB.config.driveUrl) syncAllToDrive();
+},5*60*1000);
+
+// ── Sync al cerrar/cambiar pestaña ──
+window.addEventListener('beforeunload',()=>{
+  if(SESSION.user&&DB.config.driveUrl){
+    const vRows=DB.ventas.map(v=>[v.id,v.fecha,v.nombre,v.cedula,v.genero||'',v.telefono||'',v.email||'',v.direccion||'',v.nacimiento||'',v.edad||'',v.clinica||'',v.estudio,v.formato,v.metodo,v.valor,v.notas||'']);
+    navigator.sendBeacon&&navigator.sendBeacon(DB.config.driveUrl,JSON.stringify({action:'overwrite',sheet:'Ventas',rows:vRows}));
+  }
+});
+
+function _updateSyncDetail(){
+  const el=document.getElementById('sync-status-detail');
+  if(el&&DB.config.driveLastSync){
+    const d=new Date(DB.config.driveLastSync);
+    el.innerHTML='<span style="color:var(--success)">✅ Última sincronización: '+d.toLocaleString('es-CO')+'</span>';
+  }
+}
+
+// ── Test de conexión ──
+async function testDriveConnection(){
+  const url=DB.config.driveUrl;
+  if(!url){toast('No hay URL configurada','⚠️');return;}
+  if(!url.includes('script.google.com')){toast('La URL no parece ser de Apps Script','❌');return;}
+  toast('Probando conexión…','⏳');
+  setSyncStatus('syncing');
+  try{
+    // GET al Apps Script — responde {ok:true, msg:'CRX API activa ✓'} si está bien publicado
+    const r=await fetch(url+'?test=1&t='+Date.now(),{method:'GET',mode:'cors',cache:'no-store'});
+    if(r.ok){
+      const d=await r.json();
+      if(d.ok){
+        toast('✅ Drive conectado correctamente','✅');
+        setSyncStatus('ok');
+        const el=document.getElementById('sync-status-detail');
+        if(el)el.innerHTML='<span style="color:var(--success)">✅ Conexión verificada · '+new Date().toLocaleTimeString('es-CO')+'</span>';
+        return;
+      }
+    }
+    throw new Error('Respuesta inesperada del servidor');
+  }catch(e){
+    // Si falla CORS pero el fetch no lanzó network error, el script existe pero tiene problemas de permisos
+    const eMsg=e.message||'';
+    if(eMsg.includes('CORS')||eMsg.includes('NetworkError')||eMsg.includes('Failed to fetch')){
+      toast('⚠️ CORS bloqueado — verifica que el script está publicado como "Cualquier usuario"','⚠️');
+      setSyncStatus('error');
+      const el=document.getElementById('sync-status-detail');
+      if(el)el.innerHTML='<span style="color:var(--warn)">⚠️ CORS bloqueado. Republica el script con acceso "Cualquier usuario"</span>';
+    }else{
+      setSyncStatus('error');
+      toast('Error de conexión: '+eMsg,'❌');
+    }
+  }
+}
+
+// Cargar URL guardada al abrir modal (handled in INIT)
+</script>
+
+
+<script>
+// ══════════════════════════════
+//  DATABASE
+// ══════════════════════════════
+const DB = {
+  ventas:    JSON.parse(localStorage.getItem('crx_ventas')    || '[]'),
+  inventario:JSON.parse(localStorage.getItem('crx_inv')       || '[]'),
+  recetas:   JSON.parse(localStorage.getItem('crx_recetas')   || '[]'),
+  gastos:    JSON.parse(localStorage.getItem('crx_gastos')    || '[]'),
+  config:    JSON.parse(localStorage.getItem('crx_config')    || '{}'),
+  rangos:    JSON.parse(localStorage.getItem('crx_rangos')    || '{"vMin":50000,"vMax":500000,"gWarn":30,"gDanger":60,"invFactor":1.5}'),
+  usuarios:  JSON.parse(localStorage.getItem('crx_usuarios')  || '[]'),
+  contadores:JSON.parse(localStorage.getItem('crx_contadores')|| '{}'),
+  impresora: JSON.parse(localStorage.getItem('crx_impresora') || '{"ancho":80,"nombreCentro":"CRX Radiología","direccion":"","telefono":"","footer":"Gracias por su visita","mostrarLogo":true,"copias":1,"cajon":false}'),
+};
+function save(){
+  localStorage.setItem('crx_ventas',    JSON.stringify(DB.ventas));
+  localStorage.setItem('crx_inv',       JSON.stringify(DB.inventario));
+  localStorage.setItem('crx_recetas',   JSON.stringify(DB.recetas));
+  localStorage.setItem('crx_gastos',    JSON.stringify(DB.gastos));
+  localStorage.setItem('crx_config',    JSON.stringify(DB.config));
+  localStorage.setItem('crx_rangos',    JSON.stringify(DB.rangos));
+  localStorage.setItem('crx_usuarios',  JSON.stringify(DB.usuarios));
+  localStorage.setItem('crx_contadores',JSON.stringify(DB.contadores));
+  localStorage.setItem('crx_impresora', JSON.stringify(DB.impresora));
+}
+
+// ── ID diario auto-renovable ──
+function getNextVentaId(){
+  const hoy=today();
+  const c=DB.contadores;
+  if(c.fecha!==hoy){c.fecha=hoy;c.ventaNum=0;}
+  c.ventaNum=(c.ventaNum||0)+1;
+  save();
+  return hoy.replace(/-/g,'').slice(2)+'-'+String(c.ventaNum).padStart(3,'0');
+  // Ej: 250615-001
+}
+
+// ── Sesión actual ──
+let SESSION={user:null,rol:null}; // se llena al login
+
+// Seed demo
+(function seedDemo(){
+  if(DB.inventario.length===0){
+    DB.inventario=[
+      {id:'ART-001',nombre:'Acetato Protector',stock:50,min:10},
+      {id:'ART-002',nombre:'Sobre Pequeño',stock:80,min:20},
+      {id:'ART-003',nombre:'CD',stock:6,min:15},
+      {id:'ART-004',nombre:'Papel Fotográfico',stock:30,min:8},
+      {id:'ART-005',nombre:'Gel Ecográfico',stock:4,min:5},
+    ];
+  }
+  if(DB.recetas.length===0){
+    DB.recetas=[
+      {id:'REC-001',estudio:'Panorámica',articulo:'ART-001',artNombre:'Acetato Protector',cantidad:1},
+      {id:'REC-002',estudio:'Panorámica',articulo:'ART-002',artNombre:'Sobre Pequeño',cantidad:1},
+      {id:'REC-003',estudio:'Tomografía',articulo:'ART-003',artNombre:'CD',cantidad:2},
+      {id:'REC-004',estudio:'Tomografía',articulo:'ART-004',artNombre:'Papel Fotográfico',cantidad:6},
+      {id:'REC-005',estudio:'Cefalometría',articulo:'ART-001',artNombre:'Acetato Protector',cantidad:1},
+    ];
+  }
+  save();
+})();
+
+// ══════════════════════════════
+//  UTILS
+// ══════════════════════════════
+const fmt = n => '$'+Math.round(n||0).toLocaleString('es-CO');
+const fmtNum = n => '$'+Math.round(n||0).toLocaleString('es-CO'); // alias para usar dentro de strings de recibo
+const today = () => new Date().toISOString().split('T')[0];
+
+function toast(msg,ico='✅'){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-ico').textContent=ico;
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.classList.remove('show'),2800);
+}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+function rowDetail(lbl,val,cls=''){
+  return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em">${lbl}</span>
+    <span class="${cls}" style="font-size:13px">${val}</span>
+  </div>`;
+}
+
+// Date topbar
+(function tick(){
+  const d=new Date();
+  document.getElementById('tb-date').textContent=d.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  setTimeout(tick,60000);
+})();
+
+// ══════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════
+const TITLES={dashboard:'Dashboard',ventas:'Ventas',inventario:'Inventario',recetas:'Recetas',gastos:'Gastos',historial:'Historial',config:'Configuración'};
+function goto(id,el){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  document.getElementById('pg-title').textContent=TITLES[id]||id;
+  renderSection(id);
+}
+function renderSection(id){
+  ({dashboard:renderDashboard,ventas:renderVentas,inventario:renderInventario,recetas:renderRecetas,gastos:renderGastos,historial:renderHistorial,config:renderConfig})[id]?.();
+}
+
+// ══════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════
+function getFilteredData(){
+  const desde=document.getElementById('d-desde').value;
+  const hasta=document.getElementById('d-hasta').value;
+  const metodo=document.getElementById('d-metodo-filter').value;
+  const gastoTipo=document.getElementById('d-gasto-filter').value;
+  const ventas=DB.ventas.filter(v=>{
+    if(desde&&v.fecha<desde)return false;
+    if(hasta&&v.fecha>hasta)return false;
+    if(metodo&&v.metodo!==metodo)return false;
+    return true;
+  });
+  const gastos=DB.gastos.filter(g=>{
+    if(desde&&g.fecha<desde)return false;
+    if(hasta&&g.fecha>hasta)return false;
+    if(gastoTipo&&g.concepto!==gastoTipo)return false;
+    return true;
+  });
+  return {ventas,gastos};
+}
+
+function resetDashFilter(){
+  ['d-desde','d-hasta'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('d-metodo-filter').value='';
+  document.getElementById('d-gasto-filter').value='';
+  renderDashboard();
+}
+
+function renderDashboard(){
+  const {ventas,gastos}=getFilteredData();
+  const todayStr=today();
+  const mesStr=todayStr.slice(0,7);
+
+  // Net balance
+  const totalV=ventas.reduce((a,v)=>a+(v.valor||0),0);
+  const totalG=gastos.reduce((a,g)=>a+(g.monto||0),0);
+  const util=totalV-totalG;
+  document.getElementById('net-ventas').textContent=fmt(totalV);
+  document.getElementById('net-gastos').textContent=fmt(totalG);
+  const utilEl=document.getElementById('net-util');
+  utilEl.textContent=fmt(util);
+  utilEl.style.color=util>=0?'var(--success)':'var(--danger)';
+  document.getElementById('net-n').textContent=ventas.length;
+  document.getElementById('net-avg').textContent=ventas.length?fmt(totalV/ventas.length):'$0';
+
+  // Hoy / mes (sin filtros de fecha para contexto fijo)
+  const ventasHoy=DB.ventas.filter(v=>v.fecha===todayStr);
+  const ventasMes=DB.ventas.filter(v=>v.fecha?.startsWith(mesStr));
+  const gastosMes=DB.gastos.filter(g=>g.fecha?.startsWith(mesStr));
+  const stockCrit=DB.inventario.filter(i=>parseInt(i.stock)<=parseInt(i.min));
+  document.getElementById('d-hoy').textContent=fmt(ventasHoy.reduce((a,v)=>a+(v.valor||0),0));
+  document.getElementById('d-hoy-n').textContent=ventasHoy.length+' estudios hoy';
+  document.getElementById('d-mes').textContent=fmt(ventasMes.reduce((a,v)=>a+(v.valor||0),0));
+  document.getElementById('d-mes-n').textContent=ventasMes.length+' registros';
+  document.getElementById('d-gastos-mes').textContent=fmt(gastosMes.reduce((a,g)=>a+(g.monto||0),0));
+  document.getElementById('d-gastos-mes-n').textContent=gastosMes.length+' gastos';
+  document.getElementById('d-stock').textContent=stockCrit.length;
+
+  // Chart 7 días
+  const dias=[];
+  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);dias.push(d.toISOString().split('T')[0]);}
+  const dVals=dias.map(d=>DB.ventas.filter(v=>v.fecha===d).reduce((a,v)=>a+(v.valor||0),0));
+  const maxV=Math.max(...dVals,1);
+  document.getElementById('d-chart').innerHTML=dias.map((d,i)=>{
+    const lbl=d.slice(5).replace('-','/');
+    const pct=Math.round((dVals[i]/maxV)*100);
+    return `<div class="bg-bar"><div class="bval" style="color:var(--accent)">${dVals[i]>0?'$'+Math.round(dVals[i]/1000)+'k':''}</div><div class="bar" style="height:${pct}%;background:var(--accent2)"></div><div class="blbl">${lbl}</div></div>`;
+  }).join('');
+
+  // Métodos de pago breakdown (del período filtrado)
+  const metMap={};
+  ventas.forEach(v=>{if(v.metodo){metMap[v.metodo]=(metMap[v.metodo]||0)+(v.valor||0);}});
+  const metColors=['#63b3ed','#4ade80','#c084fc','#fbbf24','#f87171','#2dd4bf','#fb923c'];
+  const metEntries=Object.entries(metMap).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('d-metodos').innerHTML=metEntries.length?metEntries.map(([m,v],i)=>{
+    const pct=totalV>0?Math.round(v/totalV*100):0;
+    return `<div class="bk-item"><span style="font-size:12px;min-width:110px;color:var(--text2)">${m}</span><div class="bk-bar-wrap"><div class="bk-bar-fill" style="width:${pct}%;background:${metColors[i%metColors.length]}"></div></div><span class="bk-pct">${pct}%</span></div>`;
+  }).join(''):'<div style="color:var(--text3);font-size:12px;padding:8px 0">Sin datos en el período</div>';
+
+  // Gastos breakdown
+  const gMap={};
+  gastos.forEach(g=>{if(g.concepto){gMap[g.concepto]=(gMap[g.concepto]||0)+(g.monto||0);}});
+  const gEntries=Object.entries(gMap).sort((a,b)=>b[1]-a[1]);
+  const gColors=['#f87171','#fbbf24','#fb923c','#c084fc','#63b3ed','#4ade80','#2dd4bf'];
+  document.getElementById('d-gastos-breakdown').innerHTML=gEntries.length?gEntries.map(([c,v],i)=>{
+    const pct=totalG>0?Math.round(v/totalG*100):0;
+    const rng=DB.rangos;
+    const warnPct=rng.gWarn||30; const dangPct=rng.gDanger||60;
+    const col=pct>=dangPct?'var(--danger)':pct>=warnPct?'var(--warn)':gColors[i%gColors.length];
+    return `<div class="bk-item"><span style="font-size:12px;min-width:130px;color:var(--text2)">${c}</span><div class="bk-bar-wrap"><div class="bk-bar-fill" style="width:${pct}%;background:${col}"></div></div><span class="bk-pct">${pct}%</span></div>`;
+  }).join(''):'<div style="color:var(--text3);font-size:12px;padding:8px 0">Sin gastos en el período</div>';
+
+  // Top estudios
+  const eMap={};
+  ventas.forEach(v=>{if(v.estudio){eMap[v.estudio]=eMap[v.estudio]||{n:0,t:0};eMap[v.estudio].n++;eMap[v.estudio].t+=(v.valor||0);}});
+  const topE=Object.entries(eMap).sort((a,b)=>b[1].n-a[1].n).slice(0,5);
+  document.getElementById('d-estudios').innerHTML=topE.length?topE.map(([e,d])=>`<tr><td>${e}</td><td class="mono">${d.n}</td><td class="mono" style="color:var(--success)">${fmt(d.t)}</td></tr>`).join(''):'<tr><td colspan="3" class="es">Sin datos</td></tr>';
+
+  // Últimas ventas
+  document.getElementById('d-ventas-recent').innerHTML=[...DB.ventas].reverse().slice(0,6).map(v=>`<tr><td class="mono">${v.id}</td><td>${v.nombre||'—'}</td><td>${v.estudio||'—'}</td><td class="mono" style="color:var(--success)">${fmt(v.valor)}</td></tr>`).join('') || '<tr><td colspan="4" class="es">Sin ventas</td></tr>';
+
+  // Alertas inventario
+  document.getElementById('d-inv-alerts').innerHTML=stockCrit.length?stockCrit.map(i=>`<tr><td>${i.nombre}</td><td class="mono" style="color:var(--danger);font-weight:600">${i.stock}</td><td class="mono">${i.min}</td><td><span class="badge red">Crítico</span></td></tr>`).join(''):'<tr><td colspan="4" class="es">✅ Todo OK</td></tr>';
+
+  updateBadges();
+}
+
+function updateBadges(){
+  const crit=DB.inventario.filter(i=>parseInt(i.stock)<=parseInt(i.min)).length;
+  const b=document.getElementById('inv-alert-badge');
+  b.style.display=crit>0?'inline-flex':'none';
+  b.textContent=crit;
+}
+
+// ══════════════════════════════
+//  VENTAS — CARRITO MULTI-ITEM
+// ══════════════════════════════
+let editVentaId=null;
+let carritoItems=[]; // [{estudio, formato, cantidad, precio, subtotal}]
+
+// Precios por defecto configurables
+const PRECIOS_DEFAULT={
+  'Panorámica':65000,'Tomografía':180000,'Cefalometría':55000,
+  'Periapical':30000,'Aleta de mordida':30000,'Radiografía lateral':55000,
+  'Ortopantomografía':65000,'Ecografía':90000,'Resonancia':250000,'Mamografía':120000
+};
+
+function openVenta(){
+  editVentaId=null;
+  carritoItems=[];
+  document.getElementById('mv-title').textContent='Nueva Venta';
+  ['v-clinica','v-nombre','v-cedula','v-notas','v-edad','v-telefono','v-email','v-direccion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('v-id').value=getNextVentaId();
+  document.getElementById('v-fecha').value=today();
+  document.getElementById('v-nacimiento').value='';
+  document.getElementById('v-genero').value='';
+  document.getElementById('v-metodo').value='Efectivo';
+  document.getElementById('v-pagado').value='';
+  document.getElementById('v-valor').value='0';
+  document.getElementById('v-devuelta').textContent='$ 0';
+  document.getElementById('v-devuelta').style.color='var(--text2)';
+  document.getElementById('v-valor-display').textContent='$ 0';
+  document.getElementById('v-item-cant').value='1';
+  document.getElementById('v-item-precio').value='';
+  document.getElementById('consumo-preview').style.display='none';
+  document.getElementById('inv-warn-venta').style.display='none';
+  document.getElementById('voz-hint').style.display='none';
+  resetFotos();
+  populateEstudiosSelect();
+  renderCarrito();
+  openModal('mo-venta');
+}
+
+function populateEstudiosSelect(){
+  const fromRecetas=[...new Set(DB.recetas.map(r=>r.estudio))];
+  const EXTRA=['Panorámica','Tomografía','Cefalometría','Periapical','Aleta de mordida','Radiografía lateral','Ortopantomografía','Ecografía','Resonancia','Mamografía'];
+  const all=[...new Set([...fromRecetas,...EXTRA])].sort();
+  const opts='<option value="">-- Seleccionar --</option>'+all.map(e=>`<option value="${e}">${e}</option>`).join('');
+  document.getElementById('v-item-estudio').innerHTML=opts;
+}
+
+function autoFillPrecio(){
+  const est=document.getElementById('v-item-estudio').value;
+  if(est && PRECIOS_DEFAULT[est]){
+    document.getElementById('v-item-precio').value=PRECIOS_DEFAULT[est];
+  }
+}
+
+function agregarItem(){
+  const estudio=document.getElementById('v-item-estudio').value;
+  const formato=document.getElementById('v-item-formato').value;
+  const cant=parseInt(document.getElementById('v-item-cant').value)||1;
+  const precio=parseFloat(document.getElementById('v-item-precio').value)||0;
+  if(!estudio){toast('Selecciona un estudio','⚠️');return;}
+  if(!precio){toast('Ingresa el precio','⚠️');return;}
+  carritoItems.push({estudio,formato,cantidad:cant,precio,subtotal:cant*precio});
+  // Reset campos de item
+  document.getElementById('v-item-estudio').value='';
+  document.getElementById('v-item-precio').value='';
+  document.getElementById('v-item-cant').value='1';
+  renderCarrito();
+  updateTotalVenta();
+  previewConsumoMulti();
+}
+
+function quitarItem(idx){
+  carritoItems.splice(idx,1);
+  renderCarrito();
+  updateTotalVenta();
+  previewConsumoMulti();
+}
+
+function cambiarCantItem(idx, delta){
+  const item=carritoItems[idx];
+  if(!item)return;
+  item.cantidad=Math.max(1,item.cantidad+delta);
+  item.subtotal=item.cantidad*item.precio;
+  renderCarrito();
+  updateTotalVenta();
+  previewConsumoMulti();
+}
+
+function renderCarrito(){
+  const list=document.getElementById('v-items-list');
+  const empty=document.getElementById('v-items-empty');
+  if(!carritoItems.length){
+    list.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  list.innerHTML=carritoItems.map((item,idx)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${item.estudio}</div>
+        <div style="font-size:11px;color:var(--text3)">${item.formato} · ${fmt(item.precio)} c/u</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <button onclick="cambiarCantItem(${idx},-1)" style="width:26px;height:26px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">−</button>
+        <span style="font-family:var(--mono);font-size:14px;font-weight:600;min-width:24px;text-align:center">${item.cantidad}</span>
+        <button onclick="cambiarCantItem(${idx},1)" style="width:26px;height:26px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--success);min-width:90px;text-align:right">${fmt(item.subtotal)}</div>
+      <button onclick="quitarItem(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 2px;line-height:1" title="Quitar">✕</button>
+    </div>`).join('');
+}
+
+function updateTotalVenta(){
+  const total=carritoItems.reduce((a,i)=>a+i.subtotal,0);
+  document.getElementById('v-valor').value=total;
+  document.getElementById('v-valor-display').textContent=fmt(total);
+  calcDevuelta();
+}
+
+function previewConsumoMulti(){
+  const prev=document.getElementById('consumo-preview');
+  const list=document.getElementById('consumo-list');
+  const warn=document.getElementById('inv-warn-venta');
+  const estudios=[...new Set(carritoItems.map(i=>i.estudio))];
+  if(!estudios.length){prev.style.display='none';warn.style.display='none';return;}
+  // Agrupar consumo total por artículo
+  const consumoMap={};
+  carritoItems.forEach(item=>{
+    DB.recetas.filter(r=>r.estudio===item.estudio).forEach(r=>{
+      const key=r.articulo;
+      consumoMap[key]=consumoMap[key]||{nombre:r.artNombre,total:0};
+      consumoMap[key].total+=parseInt(r.cantidad)*item.cantidad;
+    });
+  });
+  const entradas=Object.entries(consumoMap);
+  if(!entradas.length){prev.style.display='none';warn.style.display='none';return;}
+  let insuf=false;
+  list.innerHTML=entradas.map(([artId,data])=>{
+    const inv=DB.inventario.find(i=>i.id===artId);
+    const stock=inv?parseInt(inv.stock):0;
+    const ok=stock>=data.total;
+    if(!ok)insuf=true;
+    return `<div style="display:flex;align-items:center;gap:7px"><span>${ok?'✅':'❌'}</span><span style="flex:1">${data.nombre}</span><span style="color:var(--text3);font-size:11px">necesita <b style="color:var(--warn)">${data.total}</b> · stock: <b style="color:${ok?'var(--success)':'var(--danger)'}">${stock}</b></span></div>`;
+  }).join('');
+  prev.style.display='block';
+  warn.style.display=insuf?'flex':'none';
+}
+
+// Mantener firma para compatibilidad con editVenta
+function previewConsumo(){ previewConsumoMulti(); }
+
+function guardarVenta(){
+  if(!carritoItems.length){toast('Agrega al menos un estudio','⚠️');return;}
+  const id=document.getElementById('v-id').value.trim();
+  const fecha=document.getElementById('v-fecha').value;
+  const nombre=document.getElementById('v-nombre').value.trim();
+  const cedula=document.getElementById('v-cedula').value.trim();
+  const pagado=parseFloat(document.getElementById('v-pagado').value)||0;
+  const total=carritoItems.reduce((a,i)=>a+i.subtotal,0);
+  if(!id||!fecha||!nombre||!cedula){toast('Completa los campos obligatorios del paciente (*)','⚠️');return;}
+  if(!editVentaId&&DB.ventas.find(x=>x.id===id)){toast('Ya existe ID '+id,'❌');return;}
+  if(document.getElementById('v-metodo').value==='Efectivo'&&pagado>0&&pagado<total){toast('Monto pagado insuficiente','❌');return;}
+
+  const v={
+    id,fecha,
+    nombre,cedula,
+    nacimiento:document.getElementById('v-nacimiento').value,
+    edad:document.getElementById('v-edad').value,
+    genero:document.getElementById('v-genero').value,
+    telefono:document.getElementById('v-telefono').value.trim(),
+    email:document.getElementById('v-email').value.trim(),
+    direccion:document.getElementById('v-direccion').value.trim(),
+    clinica:document.getElementById('v-clinica').value.trim(),
+    items:[...carritoItems],           // array de estudios
+    estudio:carritoItems.map(i=>`${i.cantidad>1?i.cantidad+'× ':''}${i.estudio}`).join(', '), // resumen legible
+    formato:carritoItems.map(i=>i.formato).join('/'),
+    metodo:document.getElementById('v-metodo').value,
+    valor:total,
+    pagado,
+    devuelta:Math.max(0,pagado-total),
+    notas:document.getElementById('v-notas').value.trim(),
+    foto1:document.getElementById('v-foto1').dataset.b64||'',
+    foto2:document.getElementById('v-foto2').dataset.b64||'',
+  };
+
+  // Descontar inventario (solo en nueva venta)
+  if(!editVentaId){
+    carritoItems.forEach(item=>{
+      DB.recetas.filter(r=>r.estudio===item.estudio).forEach(r=>{
+        const inv=DB.inventario.find(i=>i.id===r.articulo);
+        if(inv)inv.stock=Math.max(0,parseInt(inv.stock)-parseInt(r.cantidad)*item.cantidad);
+      });
+    });
+  }
+
+  if(editVentaId){const idx=DB.ventas.findIndex(x=>x.id===editVentaId);if(idx>=0)DB.ventas[idx]=v;}
+  else DB.ventas.push(v);
+
+  save(); closeModal('mo-venta'); renderVentas(); renderDashboard();
+  if(editVentaId){
+    toast('Venta actualizada correctamente','✏️');
+    editVentaId=null; carritoItems=[];
+  } else {
+    editVentaId=null; carritoItems=[];
+    setTimeout(()=>mostrarNotifVenta(v),250);
+  }
+}
+
+// ══════ NOTIFICACIÓN VENTA EXITOSA ══════
+function mostrarNotifVenta(v){
+  const devuelta=Math.max(0,(v.pagado||0)-v.valor);
+  document.getElementById('nv-id').textContent='ID: '+(v.id||'')+'  ·  '+v.fecha;
+  document.getElementById('nv-nombre').textContent=v.nombre||'—';
+  document.getElementById('nv-metodo').textContent=v.metodo||'—';
+  document.getElementById('nv-total').textContent=fmt(v.valor);
+  document.getElementById('nv-pagado').textContent=v.pagado>0?fmt(v.pagado):'—';
+  const devBox=document.getElementById('nv-devuelta-box');
+  const sinDev=document.getElementById('nv-sin-devuelta');
+  if(devuelta>0){
+    document.getElementById('nv-devuelta-val').textContent=fmt(devuelta);
+    devBox.style.display='block'; sinDev.style.display='none';
+  } else {
+    devBox.style.display='none'; sinDev.style.display='block';
+  }
+  window._ventaImprimir=v;
+  const el=document.getElementById('notif-venta');
+  el.style.display='flex';
+  el.style.animation='none';
+  setTimeout(()=>el.style.animation='',10);
+}
+
+function cerrarNotifVenta(){
+  document.getElementById('notif-venta').style.display='none';
+}
+
+function notifImprimirTiquet(){
+  cerrarNotifVenta();
+  selFmtImp('termica');
+  setTimeout(()=>imprimirConImpresora(),100);
+}
+
+function notifImprimirNormal(fmt_){
+  cerrarNotifVenta();
+  selFmtImp(fmt_);
+  setTimeout(()=>imprimirConImpresora(),100);
+}
+
+function notifImprimirPDF(){
+  cerrarNotifVenta();
+  selFmtImp(_fmtImpresion||'carta');
+  setTimeout(()=>imprimirComoPDF(),100);
+}
+
+function renderVentas(){
+  const q=(document.getElementById('v-search').value||'').toLowerCase();
+  const fm=(document.getElementById('v-f-metodo').value||'');
+  const rows=[...DB.ventas].reverse().filter(v=>{
+    if(fm&&v.metodo!==fm)return false;
+    if(q&&!((v.nombre||'').toLowerCase().includes(q)||(v.id||'').toLowerCase().includes(q)||(v.cedula||'').includes(q)))return false;
+    return true;
+  });
+  document.getElementById('v-tbody').innerHTML=rows.length?rows.map(v=>`
+    <tr>
+      <td class="mono">${v.id}</td><td>${v.fecha||'—'}</td><td>${v.nombre||'—'}</td>
+      <td class="mono">${v.cedula||'—'}</td><td>${v.clinica||'—'}</td><td>${v.estudio||'—'}</td>
+      <td><span class="badge ${v.formato==='Digital'?'blue':'purple'}">${v.formato}</span></td>
+      <td><span class="badge gray">${v.metodo||'—'}</span></td>
+      <td class="mono" style="color:var(--success)">${fmt(v.valor)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn xs" onclick="verVenta('${v.id}')">👁</button>
+        <button class="btn xs" onclick="editVenta('${v.id}')">✏️</button>
+        <button class="btn xs" onclick="imprimirRecibo(DB.ventas.find(x=>x.id==='${v.id}'))" title="Reimprimir recibo">🖨️</button>
+        <button class="btn xs dang" onclick="delVenta('${v.id}')">🗑</button>
+      </td>
+    </tr>`).join('')
+    :'<tr><td colspan="10"><div class="es"><div class="es-ico">📋</div>Sin ventas</div></td></tr>';
+}
+function filterVentas(){renderVentas();}
+
+function verVenta(id){
+  const v=DB.ventas.find(x=>x.id===id); if(!v)return;
+  const itemsHtml=v.items&&v.items.length
+    ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;margin:8px 0">
+        <div style="font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Estudios / Items</div>
+        ${v.items.map(i=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${i.cantidad>1?i.cantidad+'× ':''}<b>${i.estudio}</b> <span style="color:var(--text3)">${i.formato}</span></span><span style="font-family:var(--mono);color:var(--success)">${fmt(i.subtotal)}</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding-top:6px;color:var(--accent)"><span>TOTAL</span><span style="font-family:var(--mono)">${fmt(v.valor)}</span></div>
+      </div>`
+    : '';
+  const fotosHtml=(v.foto1||v.foto2)?`
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="font-size:10.5px;font-weight:600;color:var(--warn);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📸 Evidencia fotográfica</div>
+      <div style="display:grid;grid-template-columns:${v.foto1&&v.foto2?'1fr 1fr':'1fr'};gap:8px">
+        ${v.foto1?`<div><div style="font-size:10px;color:var(--text3);margin-bottom:4px">Foto 1</div><img src="${v.foto1}" onclick="window.open(this.src,'_blank')" style="width:100%;border-radius:7px;border:1px solid var(--border);cursor:zoom-in;max-height:160px;object-fit:cover"></div>`:''}
+        ${v.foto2?`<div><div style="font-size:10px;color:var(--text3);margin-bottom:4px">Foto 2</div><img src="${v.foto2}" onclick="window.open(this.src,'_blank')" style="width:100%;border-radius:7px;border:1px solid var(--border);cursor:zoom-in;max-height:160px;object-fit:cover"></div>`:''}
+      </div>
+    </div>`:'';
+  document.getElementById('ver-venta-body').innerHTML=
+    [['ID Venta',v.id,'mono'],['Fecha',v.fecha],['Paciente',v.nombre],
+     ['ID Paciente',v.cedula,'mono'],['Género',v.genero||'—'],
+     ['Teléfono',v.telefono||'—'],['Email',v.email||'—'],['Dirección',v.direccion||'—'],
+     ['Nacimiento',v.nacimiento||'—'],['Edad',v.edad?v.edad:'—'],['Clínica',v.clinica||'—'],
+     ['Método',v.metodo],['Pagado',fmt(v.pagado||0),'mono'],['Devuelta',fmt(v.devuelta||0),'mono'],
+     ['Notas',v.notas||'—']
+    ].map(([l,val,c])=>rowDetail(l,val,c||'')).join('')+itemsHtml+fotosHtml;
+  // Agrandar el modal si hay fotos
+  document.querySelector('#mo-ver-venta .md').style.width=(v.foto1||v.foto2)?'560px':'440px';
+  openModal('mo-ver-venta');
+}
+
+function editVenta(id){
+  const v=DB.ventas.find(x=>x.id===id); if(!v)return;
+  editVentaId=id;
+  // Cargar items del carrito
+  carritoItems=v.items?[...v.items]:[{estudio:v.estudio||'',formato:v.formato||'Digital',cantidad:1,precio:v.valor||0,subtotal:v.valor||0}];
+  document.getElementById('mv-title').textContent='Editar Venta';
+  document.getElementById('v-id').value=v.id;
+  document.getElementById('v-fecha').value=v.fecha||today();
+  document.getElementById('v-nombre').value=v.nombre||'';
+  document.getElementById('v-cedula').value=v.cedula||'';
+  document.getElementById('v-nacimiento').value=v.nacimiento||'';
+  document.getElementById('v-edad').value=v.edad||'';
+  document.getElementById('v-genero').value=v.genero||'';
+  document.getElementById('v-telefono').value=v.telefono||'';
+  document.getElementById('v-email').value=v.email||'';
+  document.getElementById('v-direccion').value=v.direccion||'';
+  document.getElementById('v-clinica').value=v.clinica||'';
+  document.getElementById('v-notas').value=v.notas||'';
+  document.getElementById('v-metodo').value=v.metodo||'Efectivo';
+  document.getElementById('v-pagado').value=v.pagado||'';
+  document.getElementById('v-devuelta').textContent=fmt(v.devuelta||0);
+  document.getElementById('v-devuelta').style.color=v.devuelta>0?'var(--success)':'var(--text2)';
+  document.getElementById('voz-hint').style.display='none';
+  document.getElementById('inv-warn-venta').style.display='none';
+  document.getElementById('v-item-cant').value='1';
+  document.getElementById('v-item-precio').value='';
+  // Restaurar fotos si existen
+  resetFotos();
+  if(v.foto1){
+    const inp=document.getElementById('v-foto1');
+    inp.dataset.b64=v.foto1;
+    const prev=document.getElementById('v-foto1-prev');
+    prev.style.backgroundImage=`url('${v.foto1}')`;
+    prev.style.backgroundSize='cover';prev.style.backgroundPosition='center';
+    prev.innerHTML='<div style="position:absolute;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600">📸 Foto cargada</div>';
+    prev.style.border='2px solid var(--success)';
+    document.getElementById('v-foto1-clear').style.display='block';
+  }
+  if(v.foto2){
+    const inp=document.getElementById('v-foto2');
+    inp.dataset.b64=v.foto2;
+    const prev=document.getElementById('v-foto2-prev');
+    prev.style.backgroundImage=`url('${v.foto2}')`;
+    prev.style.backgroundSize='cover';prev.style.backgroundPosition='center';
+    prev.innerHTML='<div style="position:absolute;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600">📸 Foto cargada</div>';
+    prev.style.border='2px solid var(--success)';
+    document.getElementById('v-foto2-clear').style.display='block';
+  }
+  populateEstudiosSelect();
+  renderCarrito();
+  updateTotalVenta();
+  previewConsumoMulti();
+  openModal('mo-venta');
+}
+
+function delVenta(id){
+  if(!confirm('¿Eliminar venta '+id+'?'))return;
+  DB.ventas=DB.ventas.filter(v=>v.id!==id);
+  save(); renderVentas(); renderDashboard(); toast('Venta eliminada','🗑');
+}
+
+// ══════════════════════════════
+//  INVENTARIO
+// ══════════════════════════════
+let editInvId=null, stockAjusteId=null;
+
+function openInv(id){
+  editInvId=id;
+  const i=id?DB.inventario.find(x=>x.id===id):null;
+  document.getElementById('mi-title').textContent=i?'Editar Artículo':'Nuevo Artículo';
+  document.getElementById('i-id').value=i?i.id:'';
+  document.getElementById('i-id').readOnly=!!i;
+  document.getElementById('i-nombre').value=i?i.nombre:'';
+  document.getElementById('i-stock').value=i?i.stock:'';
+  document.getElementById('i-min').value=i?i.min:'';
+  openModal('mo-inv');
+}
+
+function guardarInv(){
+  const id=document.getElementById('i-id').value.trim();
+  const nombre=document.getElementById('i-nombre').value.trim();
+  const stock=parseInt(document.getElementById('i-stock').value)||0;
+  const min=parseInt(document.getElementById('i-min').value)||0;
+  if(!id||!nombre){toast('ID y Nombre obligatorios','⚠️');return;}
+  if(!editInvId&&DB.inventario.find(i=>i.id===id)){toast('ID ya existe','❌');return;}
+  const item={id,nombre,stock,min};
+  if(editInvId){const idx=DB.inventario.findIndex(i=>i.id===editInvId);if(idx>=0)DB.inventario[idx]=item;}
+  else DB.inventario.push(item);
+  save(); closeModal('mo-inv'); renderInventario(); updateBadges();
+  toast(editInvId?'Artículo actualizado':'Artículo agregado','📦');
+  editInvId=null;
+}
+
+function ajustarStock(id){
+  const inv=DB.inventario.find(i=>i.id===id); if(!inv)return;
+  stockAjusteId=id;
+  document.getElementById('ms-title').textContent='Ajustar: '+inv.nombre+' (actual: '+inv.stock+')';
+  document.getElementById('stock-nuevo').value=inv.stock;
+  document.getElementById('stock-nota').value='';
+  openModal('mo-stock');
+}
+
+function confirmarStock(){
+  const inv=DB.inventario.find(i=>i.id===stockAjusteId); if(!inv)return;
+  const val=parseInt(document.getElementById('stock-nuevo').value);
+  if(isNaN(val)||val<0){toast('Cantidad inválida','❌');return;}
+  inv.stock=val;
+  save(); closeModal('mo-stock'); renderInventario(); updateBadges();
+  toast('Stock de "'+inv.nombre+'" → '+val,'📦');
+}
+
+function renderInventario(){
+  const q=(document.getElementById('i-search').value||'').toLowerCase();
+  const factor=DB.rangos.invFactor||1.5;
+  const rows=DB.inventario.filter(i=>!q||(i.nombre||'').toLowerCase().includes(q)||(i.id||'').toLowerCase().includes(q));
+  document.getElementById('i-tbody').innerHTML=rows.length?rows.map(i=>{
+    const s=parseInt(i.stock), m=parseInt(i.min);
+    const critico=s<=m, bajo=s<=m*factor&&!critico;
+    return `<tr>
+      <td class="mono">${i.id}</td><td>${i.nombre}</td>
+      <td class="mono" style="color:${critico?'var(--danger)':bajo?'var(--warn)':'var(--success)'};font-weight:600">${i.stock}</td>
+      <td class="mono">${i.min}</td>
+      <td><span class="badge ${critico?'red':bajo?'warn':'green'}">${critico?'⚠️ Crítico':bajo?'↓ Bajo':'✅ OK'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn xs" onclick="ajustarStock('${i.id}')">+/−</button>
+        <button class="btn xs" onclick="openInv('${i.id}')">✏️</button>
+        <button class="btn xs dang" onclick="delInv('${i.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="6"><div class="es"><div class="es-ico">📦</div>Sin artículos</div></td></tr>';
+}
+function filterInventario(){renderInventario();}
+
+function delInv(id){
+  if(!confirm('¿Eliminar artículo?'))return;
+  DB.inventario=DB.inventario.filter(i=>i.id!==id);
+  save(); renderInventario(); updateBadges(); toast('Artículo eliminado','🗑');
+}
+
+// ══════════════════════════════
+//  RECETAS
+// ══════════════════════════════
+let editRecetaId=null;
+
+function openReceta(id){
+  editRecetaId=id;
+  const r=id?DB.recetas.find(x=>x.id===id):null;
+  document.getElementById('mr-title').textContent=r?'Editar Receta':'Nueva Receta';
+  document.getElementById('r-id').value=r?r.id:'';
+  document.getElementById('r-id').readOnly=!!r;
+  document.getElementById('r-estudio').value=r?r.estudio:'';
+  document.getElementById('r-cantidad').value=r?r.cantidad:'';
+  const sel=document.getElementById('r-articulo');
+  sel.innerHTML='<option value="">-- Seleccionar --</option>'+DB.inventario.map(i=>`<option value="${i.id}">${i.nombre} (stock: ${i.stock})</option>`).join('');
+  if(r)sel.value=r.articulo;
+  openModal('mo-receta');
+}
+
+function guardarReceta(){
+  const id=document.getElementById('r-id').value.trim();
+  const estudio=document.getElementById('r-estudio').value.trim();
+  const artId=document.getElementById('r-articulo').value;
+  const cantidad=parseInt(document.getElementById('r-cantidad').value)||0;
+  if(!id||!estudio||!artId||!cantidad){toast('Todos los campos son obligatorios','⚠️');return;}
+  if(!editRecetaId&&DB.recetas.find(r=>r.id===id)){toast('ID ya existe','❌');return;}
+  const inv=DB.inventario.find(i=>i.id===artId);
+  const receta={id,estudio,articulo:artId,artNombre:inv?inv.nombre:artId,cantidad};
+  if(editRecetaId){const idx=DB.recetas.findIndex(r=>r.id===editRecetaId);if(idx>=0)DB.recetas[idx]=receta;}
+  else DB.recetas.push(receta);
+  save(); closeModal('mo-receta'); renderRecetas();
+  toast(editRecetaId?'Receta actualizada':'Receta guardada','🔬');
+  editRecetaId=null;
+}
+
+function renderRecetas(){
+  const q=(document.getElementById('r-search').value||'').toLowerCase();
+  const rows=DB.recetas.filter(r=>!q||(r.estudio||'').toLowerCase().includes(q)||(r.artNombre||'').toLowerCase().includes(q));
+  document.getElementById('r-tbody').innerHTML=rows.length?rows.map(r=>{
+    const inv=DB.inventario.find(i=>i.id===r.articulo);
+    const stock=inv?parseInt(inv.stock):0;
+    const ok=stock>=parseInt(r.cantidad);
+    return `<tr>
+      <td class="mono">${r.id}</td>
+      <td><span class="badge blue">${r.estudio}</span></td>
+      <td>${r.artNombre}</td>
+      <td class="mono" style="color:var(--warn);font-weight:600">${r.cantidad}</td>
+      <td class="mono" style="color:${ok?'var(--success)':'var(--danger)'}">${stock} ${ok?'':'⚠️'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn xs" onclick="openReceta('${r.id}')">✏️</button>
+        <button class="btn xs dang" onclick="delReceta('${r.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="6"><div class="es"><div class="es-ico">🔬</div>Sin recetas</div></td></tr>';
+}
+function filterRecetas(){renderRecetas();}
+
+function delReceta(id){
+  if(!confirm('¿Eliminar receta?'))return;
+  DB.recetas=DB.recetas.filter(r=>r.id!==id);
+  save(); renderRecetas(); toast('Receta eliminada','🗑');
+}
+
+// ══════════════════════════════
+//  GASTOS
+// ══════════════════════════════
+let editGastoId=null;
+
+function openGasto(id){
+  editGastoId=id;
+  const g=id?DB.gastos.find(x=>x.id===id):null;
+  document.getElementById('mg-title').textContent=g?'Editar Gasto':'Nuevo Gasto';
+  document.getElementById('g-id').value=g?g.id:'';
+  document.getElementById('g-id').readOnly=!!g;
+  document.getElementById('g-fecha').value=g?g.fecha:today();
+  document.getElementById('g-concepto').value=g?g.concepto:'Comida / Alimentación';
+  document.getElementById('g-monto').value=g?g.monto:'';
+  document.getElementById('g-comprobante').value=g?g.comprobante||'':'';
+  openModal('mo-gasto');
+}
+
+function guardarGasto(){
+  const id=document.getElementById('g-id').value.trim();
+  const fecha=document.getElementById('g-fecha').value;
+  const concepto=document.getElementById('g-concepto').value;
+  const monto=parseFloat(document.getElementById('g-monto').value)||0;
+  const comprobante=document.getElementById('g-comprobante').value.trim();
+  if(!id||!fecha||!monto){toast('ID, Fecha y Monto obligatorios','⚠️');return;}
+  if(!editGastoId&&DB.gastos.find(g=>g.id===id)){toast('ID ya existe','❌');return;}
+  const gasto={id,fecha,concepto,monto,comprobante};
+  if(editGastoId){const idx=DB.gastos.findIndex(g=>g.id===editGastoId);if(idx>=0)DB.gastos[idx]=gasto;}
+  else DB.gastos.push(gasto);
+  save(); closeModal('mo-gasto'); renderGastos(); renderDashboard();
+  toast(editGastoId?'Gasto actualizado':'Gasto registrado','💸');
+  editGastoId=null;
+}
+
+function getGastosFiltrados(){
+  const desde=document.getElementById('g-desde').value;
+  const hasta=document.getElementById('g-hasta').value;
+  const concepto=document.getElementById('g-f-concepto').value;
+  const q=(document.getElementById('g-search').value||'').toLowerCase();
+  return DB.gastos.filter(g=>{
+    if(desde&&g.fecha<desde)return false;
+    if(hasta&&g.fecha>hasta)return false;
+    if(concepto&&g.concepto!==concepto)return false;
+    if(q&&!(g.concepto||'').toLowerCase().includes(q)&&!(g.id||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+
+function renderGastos(){
+  const rows=getGastosFiltrados();
+  const totalP=rows.reduce((a,g)=>a+(g.monto||0),0);
+  const totalAll=DB.gastos.reduce((a,g)=>a+(g.monto||0),0);
+  const cMap={};DB.gastos.forEach(g=>{cMap[g.concepto]=(cMap[g.concepto]||0)+(g.monto||0);});
+  const topC=Object.entries(cMap).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('g-total-mes').textContent=fmt(totalP);
+  document.getElementById('g-total-mes-n').textContent=rows.length+' registros';
+  document.getElementById('g-total-all').textContent=fmt(totalAll);
+  document.getElementById('g-top').textContent=topC?topC[0]:'—';
+  document.getElementById('g-tbody').innerHTML=rows.length?[...rows].reverse().map(g=>`
+    <tr>
+      <td class="mono">${g.id}</td><td>${g.fecha||'—'}</td><td>${g.concepto}</td>
+      <td class="mono" style="color:var(--danger)">${fmt(g.monto)}</td>
+      <td style="font-size:12px;color:var(--text2)">${g.comprobante||'—'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn xs" onclick="openGasto('${g.id}')">✏️</button>
+        <button class="btn xs dang" onclick="delGasto('${g.id}')">🗑</button>
+      </td>
+    </tr>`).join('')
+    :'<tr><td colspan="6"><div class="es"><div class="es-ico">💸</div>Sin gastos</div></td></tr>';
+}
+function resetGastoFilter(){['g-desde','g-hasta'].forEach(id=>document.getElementById(id).value='');document.getElementById('g-f-concepto').value='';renderGastos();}
+
+function delGasto(id){
+  if(!confirm('¿Eliminar gasto?'))return;
+  DB.gastos=DB.gastos.filter(g=>g.id!==id);
+  save(); renderGastos(); renderDashboard(); toast('Gasto eliminado','🗑');
+}
+
+// ══════════════════════════════
+//  HISTORIAL
+// ══════════════════════════════
+function getHistFiltrados(){
+  const desde=document.getElementById('h-desde').value;
+  const hasta=document.getElementById('h-hasta').value;
+  const metodo=document.getElementById('h-f-metodo').value;
+  const q=(document.getElementById('h-search').value||'').toLowerCase();
+  return [...DB.ventas].reverse().filter(v=>{
+    if(desde&&v.fecha<desde)return false;
+    if(hasta&&v.fecha>hasta)return false;
+    if(metodo&&v.metodo!==metodo)return false;
+    if(q&&!((v.nombre||'').toLowerCase().includes(q)||(v.id||'').toLowerCase().includes(q)||(v.estudio||'').toLowerCase().includes(q)))return false;
+    return true;
+  });
+}
+
+function renderHistorial(){
+  const rows=getHistFiltrados();
+  const totalV=rows.reduce((a,v)=>a+(v.valor||0),0);
+  document.getElementById('h-total-n').textContent=rows.length;
+  document.getElementById('h-total-v').textContent=fmt(totalV);
+  document.getElementById('h-tbody').innerHTML=rows.length?rows.map(v=>`
+    <tr>
+      <td class="mono">${v.id}</td><td>${v.fecha||'—'}</td><td>${v.nombre||'—'}</td>
+      <td class="mono">${v.cedula||'—'}</td><td>${v.clinica||'—'}</td><td>${v.estudio||'—'}</td>
+      <td><span class="badge ${v.formato==='Digital'?'blue':'purple'}">${v.formato}</span></td>
+      <td><span class="badge gray">${v.metodo||'—'}</span></td>
+      <td class="mono" style="color:var(--success)">${fmt(v.valor)}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:150px;overflow:hidden;text-overflow:ellipsis">${v.notas||'—'}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="10"><div class="es"><div class="es-ico">🗂</div>Sin registros</div></td></tr>';
+}
+function resetHistFilter(){['h-desde','h-hasta'].forEach(id=>document.getElementById(id).value='');document.getElementById('h-f-metodo').value='';renderHistorial();}
+
+// ══════════════════════════════
+//  CONFIG
+// ══════════════════════════════
+function renderConfig(){
+  const c=DB.config, r=DB.rangos;
+  document.getElementById('cfg-nombre').value=c.nombre||'';
+  document.getElementById('cfg-nit').value=c.nit||'';
+  document.getElementById('cfg-dir').value=c.dir||'';
+  document.getElementById('cfg-tel').value=c.tel||'';
+  document.getElementById('cfg-user').value=c.user||'';
+  document.getElementById('rng-v-min').value=r.vMin||50000;
+  document.getElementById('rng-v-max').value=r.vMax||500000;
+  document.getElementById('rng-g-warn').value=r.gWarn||30;
+  document.getElementById('rng-g-danger').value=r.gDanger||60;
+  document.getElementById('rng-inv').value=r.invFactor||1.5;
+}
+function saveConfig(){
+  DB.config={
+    nombre:document.getElementById('cfg-nombre').value,
+    nit:document.getElementById('cfg-nit').value,
+    dir:document.getElementById('cfg-dir').value,
+    tel:document.getElementById('cfg-tel').value,
+    user:document.getElementById('cfg-user').value,
+  };
+  const u=DB.config.user||'Administrador';
+  document.getElementById('sb-name').textContent=u;
+  document.getElementById('sb-av').textContent=u.slice(0,2).toUpperCase();
+  save(); toast('Configuración guardada','⚙️');
+}
+function saveRangos(){
+  DB.rangos={
+    vMin:parseFloat(document.getElementById('rng-v-min').value)||50000,
+    vMax:parseFloat(document.getElementById('rng-v-max').value)||500000,
+    gWarn:parseFloat(document.getElementById('rng-g-warn').value)||30,
+    gDanger:parseFloat(document.getElementById('rng-g-danger').value)||60,
+    invFactor:parseFloat(document.getElementById('rng-inv').value)||1.5,
+  };
+  save(); toast('Rangos guardados','🎚');
+}
+
+// ══════════════════════════════
+//  EXPORT EXCEL
+// ══════════════════════════════
+function exportExcel(){
+  if(typeof XLSX==='undefined'){toast('Cargando XLSX...','⏳');return;}
+  const wb=XLSX.utils.book_new();
+
+  // Ventas
+  const vData=[['ID Venta','Fecha','Paciente','ID Paciente','Género','Teléfono','Email','Dirección','Nacimiento','Edad','Clínica','Estudio','Formato','Método Pago','Valor','Notas']];
+  DB.ventas.forEach(v=>vData.push([v.id,v.fecha,v.nombre,v.cedula,v.genero||'',v.telefono||'',v.email||'',v.direccion||'',v.nacimiento,v.edad,v.clinica,v.estudio,v.formato,v.metodo,v.valor,v.notas]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(vData),'Ventas');
+
+  // Inventario
+  const iData=[['ID','Nombre Artículo','Stock Actual','Punto Reorden']];
+  DB.inventario.forEach(i=>iData.push([i.id,i.nombre,i.stock,i.min]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(iData),'Inventario');
+
+  // Recetas
+  const rData=[['ID','Estudio','Artículo','Nombre Artículo','Cantidad Gasto']];
+  DB.recetas.forEach(r=>rData.push([r.id,r.estudio,r.articulo,r.artNombre,r.cantidad]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rData),'Recetas');
+
+  // Gastos
+  const gData=[['ID','Fecha','Concepto','Monto','Comprobante']];
+  DB.gastos.forEach(g=>gData.push([g.id,g.fecha,g.concepto,g.monto,g.comprobante]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(gData),'Gastos');
+
+  XLSX.writeFile(wb,'CRX_Radiologia_'+today()+'.xlsx');
+  toast('Excel descargado','📊');
+}
+
+// ══════════════════════════════
+//  EXPORT EXCEL MEJORADO PARA DRIVE (v5)
+// ══════════════════════════════
+function exportExcelDrive(){
+  if(typeof XLSX==='undefined'){toast('Cargando XLSX...','⏳');return;}
+  const wb=XLSX.utils.book_new();
+  const todayStr=today();
+  const mesStr=todayStr.slice(0,7);
+
+  // ── Hoja 1: VENTAS con formato completo ──
+  const vHeaders=['ID Venta','Fecha','Paciente','ID Paciente','Género','Teléfono','Email','Dirección','Nacimiento','Edad','Clínica','Estudio','Formato','Método Pago','Total ($)','Pagado ($)','Devuelta ($)','Notas'];
+  const vData=[vHeaders];
+  DB.ventas.forEach(v=>vData.push([v.id,v.fecha,v.nombre,v.cedula,v.genero||'',v.telefono||'',v.email||'',v.direccion||'',v.nacimiento||'',v.edad||'',v.clinica||'',v.estudio,v.formato,v.metodo,v.valor,v.pagado||0,Math.max(0,(v.pagado||0)-v.valor),v.notas||'']));
+  const wsV=XLSX.utils.aoa_to_sheet(vData);
+  // Ancho de columnas
+  wsV['!cols']=[{wch:14},{wch:11},{wch:22},{wch:13},{wch:10},{wch:15},{wch:22},{wch:25},{wch:12},{wch:7},{wch:18},{wch:22},{wch:8},{wch:15},{wch:13},{wch:13},{wch:13},{wch:25}];
+  XLSX.utils.book_append_sheet(wb,wsV,'Ventas');
+
+  // ── Hoja 2: INVENTARIO ──
+  const iHeaders=['ID Artículo','Nombre','Stock Actual','Punto Reorden','Estado'];
+  const iData=[iHeaders];
+  DB.inventario.forEach(i=>{
+    const estado=parseInt(i.stock)<=parseInt(i.min)?'CRÍTICO':parseInt(i.stock)<=parseInt(i.min)*1.5?'Bajo':'OK';
+    iData.push([i.id,i.nombre,i.stock,i.min,estado]);
+  });
+  const wsI=XLSX.utils.aoa_to_sheet(iData);
+  wsI['!cols']=[{wch:12},{wch:28},{wch:13},{wch:15},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,wsI,'Inventario');
+
+  // ── Hoja 3: RECETAS ──
+  const rHeaders=['ID','Estudio','ID Artículo','Nombre Artículo','Cant. por Estudio'];
+  const rData=[rHeaders];
+  DB.recetas.forEach(r=>rData.push([r.id,r.estudio,r.articulo,r.artNombre,r.cantidad]));
+  const wsR=XLSX.utils.aoa_to_sheet(rData);
+  wsR['!cols']=[{wch:10},{wch:22},{wch:12},{wch:28},{wch:17}];
+  XLSX.utils.book_append_sheet(wb,wsR,'Recetas');
+
+  // ── Hoja 4: GASTOS ──
+  const gHeaders=['ID','Fecha','Concepto','Monto ($)','Comprobante'];
+  const gData=[gHeaders];
+  DB.gastos.forEach(g=>gData.push([g.id,g.fecha,g.concepto,g.monto,g.comprobante||'']));
+  const wsG=XLSX.utils.aoa_to_sheet(gData);
+  wsG['!cols']=[{wch:10},{wch:11},{wch:22},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsG,'Gastos');
+
+  // ── Hoja 5: RESUMEN EJECUTIVO ──
+  const ventasMes=DB.ventas.filter(v=>v.fecha?.startsWith(mesStr));
+  const gastosMes=DB.gastos.filter(g=>g.fecha?.startsWith(mesStr));
+  const totalVMes=ventasMes.reduce((a,v)=>a+(v.valor||0),0);
+  const totalGMes=gastosMes.reduce((a,g)=>a+(g.monto||0),0);
+  const totalVGlobal=DB.ventas.reduce((a,v)=>a+(v.valor||0),0);
+  const totalGGlobal=DB.gastos.reduce((a,g)=>a+(g.monto||0),0);
+  const stockCrit=DB.inventario.filter(i=>parseInt(i.stock)<=parseInt(i.min));
+  // Métodos de pago del mes
+  const metMap={};
+  ventasMes.forEach(v=>{metMap[v.metodo]=(metMap[v.metodo]||0)+(v.valor||0);});
+  const sData=[
+    ['CRX Radiología — Resumen Ejecutivo','','Generado:',new Date().toLocaleString('es-CO')],
+    [''],
+    ['PERÍODO','Mes actual: '+mesStr],
+    [''],
+    ['MÉTRICAS DEL MES','','',''],
+    ['Ventas totales (mes)','$'+Math.round(totalVMes).toLocaleString('es-CO'),'Número de ventas',ventasMes.length],
+    ['Gastos totales (mes)','$'+Math.round(totalGMes).toLocaleString('es-CO'),'Utilidad neta',('$'+Math.round(totalVMes-totalGMes).toLocaleString('es-CO'))],
+    ['Ticket promedio',ventasMes.length?'$'+Math.round(totalVMes/ventasMes.length).toLocaleString('es-CO'):'$0','Stock crítico',stockCrit.length+' artículo(s)'],
+    [''],
+    ['MÉTRICAS GLOBALES (histórico)','','',''],
+    ['Total ventas acumuladas','$'+Math.round(totalVGlobal).toLocaleString('es-CO'),'Total registros',DB.ventas.length],
+    ['Total gastos acumulados','$'+Math.round(totalGGlobal).toLocaleString('es-CO'),'Utilidad neta total','$'+Math.round(totalVGlobal-totalGGlobal).toLocaleString('es-CO')],
+    [''],
+    ['MÉTODOS DE PAGO (mes actual)','Monto','',''],
+    ...Object.entries(metMap).sort((a,b)=>b[1]-a[1]).map(([m,v])=>[m,'$'+Math.round(v).toLocaleString('es-CO'),totalVMes>0?(Math.round(v/totalVMes*100)+'%'):'','']),
+    [''],
+    ['ARTÍCULOS EN STOCK CRÍTICO','Stock','Mínimo',''],
+    ...stockCrit.map(i=>[i.nombre,i.stock,i.min,'⚠️ Reponer urgente']),
+  ];
+  const wsS=XLSX.utils.aoa_to_sheet(sData);
+  wsS['!cols']=[{wch:30},{wch:20},{wch:22},{wch:25}];
+  XLSX.utils.book_append_sheet(wb,wsS,'Resumen');
+
+  const filename='CRX_DB_'+todayStr+'_'+mesStr+'.xlsx';
+  XLSX.writeFile(wb,filename);
+  toast('Excel completo descargado (5 hojas)','📊');
+}
+
+// ══════════════════════════════
+//  EXPORT PDF
+// ══════════════════════════════
+function exportPDF(){
+  if(typeof jspdf==='undefined'&&typeof window.jspdf==='undefined'){toast('Cargando PDF...','⏳');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const cfg=DB.config;
+  const centro=cfg.nombre||'CRX Radiología';
+  const todayStr=today();
+  const mesStr=todayStr.slice(0,7);
+  const ventasMes=DB.ventas.filter(v=>v.fecha?.startsWith(mesStr));
+  const gastosMes=DB.gastos.filter(g=>g.fecha?.startsWith(mesStr));
+  const totalV=ventasMes.reduce((a,v)=>a+(v.valor||0),0);
+  const totalG=gastosMes.reduce((a,g)=>a+(g.monto||0),0);
+
+  // Header
+  doc.setFillColor(11,31,62); doc.rect(0,0,297,18,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('🩻 '+centro+' — Reporte de Gestión',10,12);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('Generado: '+new Date().toLocaleString('es-CO'),220,12);
+
+  // Summary
+  doc.setTextColor(30,50,80); doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text('RESUMEN DEL MES: '+mesStr,10,26);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.setTextColor(0,0,0);
+  doc.text('Total Ventas: '+fmt(totalV),10,33);
+  doc.text('Total Gastos: '+fmt(totalG),70,33);
+  doc.text('Utilidad Neta: '+fmt(totalV-totalG),140,33);
+  doc.text('Transacciones: '+ventasMes.length,210,33);
+
+  // Ventas table
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(11,31,62);
+  doc.text('VENTAS (últimas 20)',10,42);
+  const vRows=DB.ventas.slice(-20).reverse();
+  let y=47;
+  doc.setFillColor(220,230,245); doc.rect(10,y-4,277,5,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(40,60,100);
+  ['ID','Fecha','Paciente','Cédula','Estudio','Formato','Método','Total'].forEach((h,i)=>doc.text(h,10+[0,18,33,73,103,137,155,175][i],y));
+  y+=5; doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  vRows.forEach((v,idx)=>{
+    if(y>175){doc.addPage();y=15;}
+    if(idx%2===0){doc.setFillColor(245,248,252);doc.rect(10,y-3.5,277,5,'F');}
+    ['id','fecha','nombre','cedula','estudio','formato','metodo'].forEach((k,i)=>doc.text((v[k]||'—').toString().slice(0,22),10+[0,18,33,73,103,137,155][i],y));
+    doc.text(fmt(v.valor).slice(0,14),185,y);
+    y+=5;
+  });
+
+  // Gastos table
+  y+=8;
+  if(y>175){doc.addPage();y=15;}
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(11,31,62);
+  doc.text('GASTOS DEL MES',10,y); y+=5;
+  doc.setFillColor(255,235,235); doc.rect(10,y-4,140,5,'F');
+  doc.setFontSize(7.5); doc.setTextColor(100,0,0);
+  doc.text('ID',10,y); doc.text('Fecha',25,y); doc.text('Concepto',45,y); doc.text('Monto',100,y); doc.text('Comprobante',115,y);
+  y+=5; doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  gastosMes.forEach((g,idx)=>{
+    if(y>185){doc.addPage();y=15;}
+    if(idx%2===0){doc.setFillColor(255,248,248);doc.rect(10,y-3.5,140,5,'F');}
+    doc.text((g.id||'').slice(0,10),10,y);
+    doc.text((g.fecha||'').slice(0,10),25,y);
+    doc.text((g.concepto||'').slice(0,20),45,y);
+    doc.text(fmt(g.monto).slice(0,12),100,y);
+    doc.text((g.comprobante||'—').slice(0,15),115,y);
+    y+=5;
+  });
+
+  doc.save('CRX_Reporte_'+todayStr+'.pdf');
+  toast('PDF descargado','📄');
+}
+
+// ══════════════════════════════
+//  BACKUP JSON
+// ══════════════════════════════
+function exportJSON(){
+  const data=JSON.stringify({ventas:DB.ventas,inventario:DB.inventario,recetas:DB.recetas,gastos:DB.gastos},null,2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download='CRX_backup_'+today()+'.json'; a.click();
+  toast('Backup JSON descargado','💾');
+}
+function importJSON(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0]; if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(data.ventas)DB.ventas=data.ventas;
+        if(data.inventario)DB.inventario=data.inventario;
+        if(data.recetas)DB.recetas=data.recetas;
+        if(data.gastos)DB.gastos=data.gastos;
+        save(); renderDashboard(); updateBadges();
+        toast('Backup restaurado correctamente','✅');
+      }catch(err){toast('Error al leer el archivo JSON','❌');}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ══════════════════════════════
+//  VOZ / DICTADO
+// ══════════════════════════════
+let recognition=null, activeField=null, dictadoActivo=false;
+
+function initSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return null;
+  const r=new SR();
+  r.lang='es-CO'; r.continuous=false; r.interimResults=false;
+  return r;
+}
+
+function micField(fieldId){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Tu navegador no soporta dictado por voz','❌');return;}
+  if(recognition){recognition.stop();recognition=null;}
+  const inp=document.getElementById(fieldId);
+  if(!inp)return;
+  recognition=initSpeech();
+  const btn=inp.parentElement?.querySelector('.mic-btn');
+  if(btn)btn.classList.add('listening');
+  recognition.start();
+  recognition.onresult=e=>{
+    let txt=e.results[0][0].transcript;
+    // Auto-limpieza: quitar palabras clave si las dicen solas
+    txt=txt.replace(/^(número|valor|nombre|cédula|notas?|clínica)\s*/i,'');
+    inp.value=txt;
+    inp.dispatchEvent(new Event('input'));
+    inp.dispatchEvent(new Event('change'));
+    if(btn)btn.classList.remove('listening');
+    toast('✓ "'+txt.slice(0,30)+'"','🎙');
+  };
+  recognition.onerror=()=>{if(btn)btn.classList.remove('listening');};
+  recognition.onend=()=>{if(btn)btn.classList.remove('listening');recognition=null;};
+}
+
+function toggleDictado(){
+  dictadoActivo=!dictadoActivo;
+  const btn=document.getElementById('btn-mic-voz');
+  const hint=document.getElementById('voz-hint');
+  if(dictadoActivo){
+    btn.textContent='🔴 Parar voz'; btn.classList.add('dang');
+    hint.style.display='flex';
+    startDictadoContinuo();
+  }else{
+    btn.textContent='🎙 Voz'; btn.classList.remove('dang');
+    hint.style.display='none';
+    if(recognition){recognition.stop();recognition=null;}
+    document.getElementById('mic-status').textContent='';
+  }
+}
+
+function startDictadoContinuo(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Voz no disponible en este navegador','❌');dictadoActivo=false;return;}
+  recognition=new SR();
+  recognition.lang='es-CO'; recognition.continuous=false; recognition.interimResults=false;
+  const STATUS=['v-id','v-nombre','v-cedula','v-clinica','v-valor','v-notas'];
+  const MAP={
+    'id':'v-id','número':'v-id','nombre':'v-nombre','paciente':'v-nombre',
+    'cedula':'v-cedula','cédula':'v-cedula','clinica':'v-clinica','clínica':'v-clinica',
+    'valor':'v-valor','monto':'v-valor','precio':'v-valor','total':'v-valor',
+    'nota':'v-notas','notas':'v-notas','observacion':'v-notas',
+  };
+  document.getElementById('mic-status').textContent='🔴 Escuchando...';
+  recognition.start();
+  recognition.onresult=e=>{
+    let txt=e.results[0][0].transcript.trim();
+    const lower=txt.toLowerCase();
+    // Campo destino detectado
+    let campoId=null;
+    for(const [key,fid] of Object.entries(MAP)){
+      if(lower.startsWith(key+' ')||lower.startsWith(key+':')){
+        txt=txt.slice(key.length).replace(/^[\s:]+/,'').trim();
+        campoId=fid; break;
+      }
+    }
+    if(campoId){
+      document.getElementById(campoId).value=txt;
+      document.getElementById(campoId).dispatchEvent(new Event('change'));
+      toast('Campo: '+campoId+' → "'+txt.slice(0,25)+'"','🎙');
+    }
+    // Reiniciar si dictado activo
+    if(dictadoActivo)setTimeout(()=>{recognition&&recognition.abort();recognition=initSpeech();recognition&&recognition.start();},300);
+  };
+  recognition.onend=()=>{
+    if(dictadoActivo){recognition=initSpeech();if(recognition)recognition.start();}
+    else document.getElementById('mic-status').textContent='';
+  };
+  recognition.onerror=(ev)=>{
+    if(ev.error==='no-speech'&&dictadoActivo){setTimeout(()=>{if(recognition){recognition.abort();recognition=initSpeech();recognition.start();}},500);}
+  };
+}
+
+// ══════════════════════════════
+//  EVIDENCIA FOTOGRÁFICA
+// ══════════════════════════════
+function previewFoto(input, prevId){
+  const prev=document.getElementById(prevId);
+  const clearBtn=document.getElementById(prevId.replace('-prev','-clear'));
+  const file=input.files[0];
+  if(!file)return;
+  // Validar tamaño (max 5MB)
+  if(file.size>5*1024*1024){toast('La foto es muy grande. Máx 5MB','⚠️');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    prev.style.backgroundImage=`url('${e.target.result}')`;
+    prev.style.backgroundSize='cover';
+    prev.style.backgroundPosition='center';
+    prev.innerHTML='<div style="position:absolute;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600">📸 Foto cargada</div>';
+    prev.style.border='2px solid var(--success)';
+    if(clearBtn)clearBtn.style.display='block';
+    // Guardar base64 en dataset del elemento oculto
+    input.dataset.b64=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFoto(inputId, prevId){
+  const input=document.getElementById(inputId);
+  const prev=document.getElementById(prevId);
+  const clearBtn=document.getElementById(prevId.replace('-prev','-clear'));
+  input.value='';
+  input.dataset.b64='';
+  prev.style.backgroundImage='';
+  prev.innerHTML='<span style="font-size:24px">📷</span><span>Clic para cargar o tomar foto</span>';
+  prev.style.border='2px dashed var(--border)';
+  if(clearBtn)clearBtn.style.display='none';
+}
+
+function resetFotos(){
+  clearFoto('v-foto1','v-foto1-prev');
+  clearFoto('v-foto2','v-foto2-prev');
+}
+
+// ══════════════════════════════
+//  CÁLCULO DEVUELTA
+// ══════════════════════════════
+function calcDevuelta(){
+  const valor=parseFloat(document.getElementById('v-valor').value)||0;
+  const pagado=parseFloat(document.getElementById('v-pagado').value)||0;
+  const dev=Math.max(0,pagado-valor);
+  const insuf=pagado>0&&pagado<valor;
+  const el=document.getElementById('v-devuelta');
+  el.textContent=insuf?'Falta: '+fmt(valor-pagado):fmt(dev);
+  el.style.color=insuf?'var(--danger)':dev>0?'var(--success)':'var(--text2)';
+  el.style.fontSize=dev>0?'18px':'14px';
+  el.style.fontWeight=dev>0?'700':'400';
+  // Alerta visual en tiempo real
+  const alertBox=document.getElementById('v-devuelta-alert');
+  const montoEl=document.getElementById('v-devuelta-monto');
+  const lblEl=document.getElementById('v-devuelta-lbl');
+  if(alertBox){
+    if(dev>0){
+      alertBox.style.display='flex';
+      alertBox.style.background='rgba(74,222,128,.1)';
+      alertBox.style.borderColor='rgba(74,222,128,.3)';
+      if(lblEl){lblEl.textContent='💵 Devolver al cliente:';lblEl.style.color='var(--success)';}
+      if(montoEl){montoEl.textContent=fmt(dev);montoEl.style.color='var(--success)';}
+    } else if(insuf){
+      alertBox.style.display='flex';
+      alertBox.style.background='rgba(248,113,113,.1)';
+      alertBox.style.borderColor='rgba(248,113,113,.3)';
+      if(lblEl){lblEl.textContent='⚠️ Pago insuficiente — faltan:';lblEl.style.color='var(--danger)';}
+      if(montoEl){montoEl.textContent=fmt(valor-pagado);montoEl.style.color='var(--danger)';}
+    } else {
+      alertBox.style.display='none';
+    }
+  }
+}
+
+// ══════════════════════════════
+//  CÁLCULO DE EDAD AUTOMÁTICO
+// ══════════════════════════════
+function calcEdad(){
+  const nacimiento=document.getElementById('v-nacimiento').value;
+  const edadEl=document.getElementById('v-edad');
+  if(!nacimiento){edadEl.value='';return;}
+  const hoy=new Date();
+  const nac=new Date(nacimiento);
+  if(isNaN(nac.getTime())||nac>hoy){edadEl.value='';return;}
+  let edad=hoy.getFullYear()-nac.getFullYear();
+  const m=hoy.getMonth()-nac.getMonth();
+  if(m<0||(m===0&&hoy.getDate()<nac.getDate()))edad--;
+  if(edad<0){edadEl.value='';return;}
+  if(edad<2){
+    // Mostrar en meses si es menor de 2 años
+    const meses=Math.floor((hoy-nac)/(1000*60*60*24*30.44));
+    edadEl.value=meses+' meses';
+  }else{
+    edadEl.value=edad+' años';
+  }
+}
+
+// ══════════════════════════════
+//  IMPRESIÓN DE RECIBO
+// ══════════════════════════════
+function imprimirRecibo(v){
+  // Guardar venta en variable global para el modal de impresión
+  window._ventaImprimir=v;
+  // Mostrar modal de opciones de impresión
+  document.getElementById('imp-opt-nombre').textContent=v.nombre||'';
+  document.getElementById('imp-opt-id').textContent=v.id||'';
+  openModal('mo-imp-opciones');
+}
+
+// Formato de impresión seleccionado en el modal (termica | carta | a4)
+let _fmtImpresion = 'termica';
+function selFmtImp(fmt){
+  _fmtImpresion=fmt;
+  ['termica','carta','a4'].forEach(f=>{
+    const el=document.getElementById('fmt-'+f);
+    if(!el)return;
+    if(f===fmt){
+      el.style.border='2px solid var(--accent)';
+      el.style.background='var(--accent-dim)';
+      el.querySelector('div:nth-child(2)').style.color='var(--accent)';
+    }else{
+      el.style.border='1px solid var(--border)';
+      el.style.background='transparent';
+      el.querySelector('div:nth-child(2)').style.color='var(--text2)';
+    }
+  });
+}
+
+function imprimirConImpresora(){
+  const v=window._ventaImprimir; if(!v)return;
+  closeModal('mo-imp-opciones');
+  _generarVentanaRecibo(v, false, _fmtImpresion);
+}
+
+function imprimirComoPDF(){
+  const v=window._ventaImprimir; if(!v)return;
+  closeModal('mo-imp-opciones');
+  _generarVentanaRecibo(v, true, _fmtImpresion);
+}
+
+// ── WhatsApp: genera texto resumen y abre wa.me ──
+function compartirWhatsApp(){
+  const v=window._ventaImprimir; if(!v)return;
+  closeModal('mo-imp-opciones');
+  const cfg=DB.config;
+  const centro=cfg.nombre||'CRX Radiología';
+  const devuelta=Math.max(0,(v.pagado||0)-v.valor);
+  const itemsTexto=v.items&&v.items.length
+    ? v.items.map(i=>`  • ${i.cantidad>1?i.cantidad+'× ':''}${i.estudio} (${i.formato}) — ${fmt(i.subtotal)}`).join('\n')
+    : `  • ${v.estudio||'—'} — ${fmt(v.valor)}`;
+  const texto=
+`🩻 *${centro}*
+━━━━━━━━━━━━━━━━━━━━
+📋 *Recibo de Venta*
+ID: \`${v.id}\` · Fecha: ${v.fecha}
+
+👤 *Paciente:* ${v.nombre}
+🪪 *ID:* ${v.cedula}
+${v.clinica?'🏥 *Clínica:* '+v.clinica+'\n':''}
+🩻 *Estudios:*
+${itemsTexto}
+━━━━━━━━━━━━━━━━━━━━
+💰 *Total:* ${fmt(v.valor)}
+💳 *Método:* ${v.metodo}
+${v.pagado>0?'💵 *Pagado:* '+fmt(v.pagado)+'\n':''}${devuelta>0?'🔄 *Devuelta:* '+fmt(devuelta)+'\n':''}
+${cfg.tel?'📞 '+cfg.tel:''}
+━━━━━━━━━━━━━━━━━━━━
+_Gracias por su visita_`;
+  const tel=(v.telefono||'').replace(/\D/g,'');
+  const url=tel
+    ?`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`
+    :`https://wa.me/?text=${encodeURIComponent(texto)}`;
+  window.open(url,'_blank');
+  toast('Abriendo WhatsApp…','💬');
+}
+
+// ── Copiar resumen al portapapeles ──
+function copiarResumenRecibo(){
+  const v=window._ventaImprimir; if(!v)return;
+  closeModal('mo-imp-opciones');
+  const devuelta=Math.max(0,(v.pagado||0)-v.valor);
+  const texto=`RECIBO ${v.id} · ${v.fecha}\nPaciente: ${v.nombre} (${v.cedula})\nEstudio: ${v.estudio}\nTotal: ${fmt(v.valor)}\nMétodo: ${v.metodo}${v.pagado>0?'\nPagado: '+fmt(v.pagado):''}${devuelta>0?'\nDevuelta: '+fmt(devuelta):''}`;
+  navigator.clipboard.writeText(texto).then(()=>toast('Resumen copiado al portapapeles','📋')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=texto;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Resumen copiado','📋');
+  });
+}
+
+function _generarVentanaRecibo(v, savePDF, fmt){
+  fmt = fmt || 'termica';
+  const imp=DB.impresora;
+  const cfg=DB.config;
+  const centro=imp.nombreCentro||cfg.nombre||'CRX Radiología';
+  const anchoMM=parseInt(imp.ancho)||80;
+
+  // ── Estilos según formato ──
+  let pageCSS='';
+  let bodyCSS='';
+  let containerCSS='';
+
+  if(fmt==='termica'){
+    // Rollo térmico: ancho fijo en mm, sin márgenes
+    pageCSS=`@page{margin:0;size:${anchoMM}mm auto}`;
+    bodyCSS=`font-family:'Courier New',monospace;font-size:${anchoMM>=80?'12px':'10px'};width:${anchoMM}mm;padding:3mm 4mm;background:#fff;color:#000;max-width:100%`;
+    containerCSS='max-width:100%';
+  } else if(fmt==='carta'){
+    // Carta 8.5x11 pulgadas — diseño centrado con encabezado y tabla
+    pageCSS=`@page{margin:15mm 20mm;size:letter}`;
+    bodyCSS=`font-family:Arial,sans-serif;font-size:11pt;background:#fff;color:#000;max-width:700px;margin:0 auto;padding:0`;
+    containerCSS='max-width:680px;margin:0 auto';
+  } else if(fmt==='a4'){
+    // A4 — igual que carta pero tamaño A4
+    pageCSS=`@page{margin:15mm 20mm;size:A4}`;
+    bodyCSS=`font-family:Arial,sans-serif;font-size:11pt;background:#fff;color:#000;max-width:700px;margin:0 auto;padding:0`;
+    containerCSS='max-width:680px;margin:0 auto';
+  }
+
+  // ── Contenido ──
+  const itemsHtml = v.items && v.items.length
+    ? v.items.map(i=>`
+        <tr>
+          <td style="padding:5px 8px;border-bottom:1px solid #eee">${i.cantidad>1?'<b>'+i.cantidad+'×</b> ':''}${i.estudio} <span style="color:#666;font-size:10pt">(${i.formato})</span></td>
+          <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #eee;white-space:nowrap">${fmt(i.subtotal)}</td>
+        </tr>`).join('')
+    : `<tr><td style="padding:5px 8px;border-bottom:1px solid #eee"><b>${v.estudio||'—'}</b> <span style="color:#666;font-size:10pt">(${v.formato||'—'})</span></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #eee">${fmtNum(v.valor)}</td></tr>`;
+
+  let recibo='';
+  if(fmt==='termica'){
+    // Layout de rollo térmico: texto monoespacio, separadores de guiones
+    const sep='─'.repeat(Math.max(20,Math.floor(anchoMM/2)));
+    recibo=`<html><head><meta charset="UTF-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{${bodyCSS}}
+  .center{text-align:center}.bold{font-weight:bold}
+  .sep{border-top:1px dashed #000;margin:4px 0}
+  .row{display:flex;justify-content:space-between;gap:4px}
+  .row span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis}
+  .row span:last-child{white-space:nowrap}
+  .big{font-size:14px;font-weight:bold}
+  .dev{font-size:14px;font-weight:bold;color:#1a7a1a}
+  ${pageCSS}
+</style></head><body>
+<div class="center bold" style="font-size:13px">${centro}</div>
+${imp.direccion?`<div class="center" style="font-size:10px">${imp.direccion}</div>`:''}
+${imp.telefono?`<div class="center" style="font-size:10px">Tel: ${imp.telefono}</div>`:''}
+<div class="sep"></div>
+<div class="center bold">RECIBO DE VENTA</div>
+<div class="center" style="font-size:10px">${new Date().toLocaleString('es-CO')}</div>
+<div class="sep"></div>
+<div class="row"><span>ID:</span><span class="bold">${v.id}</span></div>
+<div class="row"><span>Paciente:</span><span>${v.nombre}</span></div>
+<div class="row"><span>ID:</span><span>${v.cedula}</span></div>
+${v.telefono?`<div class="row"><span>Tel:</span><span>${v.telefono}</span></div>`:''}
+${v.clinica?`<div class="row"><span>Clínica:</span><span>${v.clinica}</span></div>`:''}
+<div class="sep"></div>
+${v.items&&v.items.length
+  ? v.items.map(i=>`<div class="row"><span>${i.cantidad>1?i.cantidad+'x ':''}<b>${i.estudio}</b></span><span>${fmtNum(i.subtotal)}</span></div><div style="font-size:10px;color:#555;padding-left:4px">${i.formato}</div>`).join('')
+  : `<div class="row"><span><b>${v.estudio||'—'}</b></span><span>${fmtNum(v.valor)}</span></div><div style="font-size:10px;color:#555;padding-left:4px">${v.formato||''}</div>`
+}
+<div class="sep"></div>
+<div class="row big"><span>TOTAL:</span><span>${fmtNum(v.valor)}</span></div>
+${v.pagado>0?`<div class="row"><span>Pagado:</span><span>${fmtNum(v.pagado)}</span></div>`:''}
+${v.devuelta>0?`<div class="row dev"><span>DEVUELTA:</span><span>${fmtNum(v.devuelta)}</span></div>`:''}
+<div class="row"><span>Método:</span><span>${v.metodo}</span></div>
+${v.notas?`<div class="sep"></div><div style="font-size:10px">${v.notas}</div>`:''}
+<div class="sep"></div>
+<div class="center" style="font-size:11px">${imp.footer||'Gracias por su visita'}</div>
+<br><br>
+</body></html>`;
+  } else {
+    // Layout carta/A4: diseño profesional con tabla y encabezado
+    recibo=`<html><head><meta charset="UTF-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{${bodyCSS}}
+  ${pageCSS}
+  .header{border-bottom:2px solid #1a3a6e;padding-bottom:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start}
+  .empresa{font-size:16pt;font-weight:bold;color:#1a3a6e}
+  .empresa-sub{font-size:9pt;color:#555;margin-top:2px}
+  .recibo-titulo{text-align:right}
+  .recibo-titulo h2{font-size:16pt;color:#1a3a6e;font-weight:bold}
+  .recibo-titulo .id{font-size:10pt;color:#666;font-family:monospace}
+  .info-section{display:flex;gap:16px;margin-bottom:14px}
+  .info-box{flex:1;background:#f7f9fc;border:1px solid #dde3ed;border-radius:6px;padding:8px 12px}
+  .info-box h4{font-size:8.5pt;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:600;margin-bottom:5px}
+  .info-box p{font-size:10pt;color:#222;margin:2px 0}
+  .info-box p span{color:#555;font-size:9pt}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px}
+  thead th{background:#1a3a6e;color:#fff;padding:7px 10px;text-align:left;font-size:9.5pt;font-weight:600}
+  thead th:last-child{text-align:right}
+  tbody td{padding:7px 10px;font-size:10pt;border-bottom:1px solid #eee}
+  tbody td:last-child{text-align:right;font-weight:500}
+  .total-section{display:flex;justify-content:flex-end;margin-bottom:16px}
+  .total-box{background:#f7f9fc;border:1px solid #dde3ed;border-radius:6px;padding:10px 16px;min-width:220px}
+  .total-row{display:flex;justify-content:space-between;font-size:10pt;padding:3px 0;gap:20px}
+  .total-row.grande{font-size:13pt;font-weight:bold;color:#1a3a6e;border-top:1.5px solid #c5cfe0;padding-top:6px;margin-top:3px}
+  .total-row.dev{color:#1a7a1a;font-size:11pt;font-weight:bold}
+  .footer-bar{border-top:1px solid #dde;padding-top:10px;text-align:center;font-size:9pt;color:#888}
+  .notas-box{background:#fffbf0;border:1px solid #f0d080;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:9.5pt;color:#555}
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="empresa">${centro}</div>
+    <div class="empresa-sub">${imp.direccion||''} ${imp.telefono?'· Tel: '+imp.telefono:''}</div>
+  </div>
+  <div class="recibo-titulo">
+    <h2>RECIBO DE VENTA</h2>
+    <div class="id">${v.id}</div>
+    <div style="font-size:9pt;color:#666;margin-top:3px">${new Date().toLocaleString('es-CO')}</div>
+  </div>
+</div>
+<div class="info-section">
+  <div class="info-box">
+    <h4>Datos del paciente</h4>
+    <p><b>${v.nombre}</b></p>
+    <p><span>ID:</span> ${v.cedula}</p>
+    ${v.telefono?`<p><span>Tel:</span> ${v.telefono}</p>`:''}
+    ${v.email?`<p><span>Email:</span> ${v.email}</p>`:''}
+  </div>
+  <div class="info-box">
+    <h4>Datos de la atención</h4>
+    ${v.clinica?`<p><span>Clínica:</span> ${v.clinica}</p>`:''}
+    <p><span>Fecha:</span> ${v.fecha||new Date().toLocaleDateString('es-CO')}</p>
+    <p><span>Método de pago:</span> ${v.metodo}</p>
+  </div>
+</div>
+<table>
+  <thead><tr><th>Estudio / Servicio</th><th>Formato</th><th style="text-align:center">Cant.</th><th>Subtotal</th></tr></thead>
+  <tbody>
+    ${v.items&&v.items.length
+      ? v.items.map(i=>`<tr><td><b>${i.estudio}</b></td><td style="color:#666">${i.formato}</td><td style="text-align:center">${i.cantidad}</td><td>${fmtNum(i.subtotal)}</td></tr>`).join('')
+      : `<tr><td><b>${v.estudio||'—'}</b></td><td style="color:#666">${v.formato||'—'}</td><td style="text-align:center">1</td><td>${fmtNum(v.valor)}</td></tr>`
+    }
+  </tbody>
+</table>
+<div class="total-section">
+  <div class="total-box">
+    <div class="total-row grande"><span>TOTAL A PAGAR</span><span>${fmtNum(v.valor)}</span></div>
+    ${v.pagado>0?`<div class="total-row"><span>Monto pagado</span><span>${fmtNum(v.pagado)}</span></div>`:''}
+    ${v.devuelta>0?`<div class="total-row dev"><span>Devuelta</span><span>${fmtNum(v.devuelta)}</span></div>`:''}
+  </div>
+</div>
+${v.notas?`<div class="notas-box"><b>Notas:</b> ${v.notas}</div>`:''}
+<div class="footer-bar">${imp.footer||'Gracias por su visita'} · ${centro}</div>
+</body></html>`;
+  }
+
+  // ── Abrir ventana y disparar impresión ──
+  const win=window.open('','_blank','width='+(fmt==='termica'?'350':'820')+',height=600');
+  if(!win){toast('Permite ventanas emergentes en el navegador para imprimir','⚠️');return;}
+  win.document.open();
+  win.document.write(recibo);
+  win.document.close();
+  if(imp.cajon&&!savePDF){try{abrirCajon();}catch(e){}}
+  // Usar setTimeout como fallback robusto cuando onload falla en algunos navegadores
+  const doPrint=()=>{win.focus();win.print();if(imp.autoClose!==false)setTimeout(()=>{try{win.close();}catch(e){}},2000);};
+  if(win.document.readyState==='complete'){doPrint();}
+  else{win.onload=doPrint;setTimeout(doPrint,800);}
+  if(savePDF) toast('En el diálogo selecciona "Guardar como PDF" como destino','📄');
+}
+
+// Apertura de cajón monedero (Web Serial API)
+async function abrirCajon(){
+  if(!navigator.serial){toast('Web Serial no disponible en este navegador','⚠️');return;}
+  try{
+    const port=await navigator.serial.requestPort();
+    await port.open({baudRate:9600});
+    const writer=port.writable.getWriter();
+    // Comando ESC/p estándar para cajón
+    await writer.write(new Uint8Array([0x1B,0x70,0x00,0x19,0x19]));
+    writer.releaseLock();
+    await port.close();
+    toast('Cajón abierto','🗄️');
+  }catch(e){toast('No se pudo abrir el cajón: '+e.message,'⚠️');}
+}
+
+// ══════════════════════════════
+//  SISTEMA DE USUARIOS
+// ══════════════════════════════
+// Roles: 'admin' (todo), 'caja' (ventas + historial), 'personalizado' (módulos específicos)
+const PERMISOS={
+  admin:['dashboard','ventas','inventario','recetas','gastos','historial','config'],
+  caja: ['ventas','historial'],
+  personalizado: [], // se define por usuario.permisos[]
+};
+
+function getPermisosUsuario(u){
+  if(u.rol==='admin') return PERMISOS.admin;
+  if(u.rol==='caja') return PERMISOS.caja;
+  if(u.rol==='personalizado') return u.permisos||[];
+  return PERMISOS[u.rol]||[];
+}
+
+function hashSimple(str){
+  let h=0;
+  for(let i=0;i<str.length;i++){h=Math.imul(31,h)+str.charCodeAt(i)|0;}
+  return Math.abs(h).toString(16);
+}
+
+function loginApp(){
+  const user=document.getElementById('login-user').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!user||!pass){shakeLogin();return;}
+
+  // Seed admin por defecto si no hay usuarios
+  if(DB.usuarios.length===0){
+    DB.usuarios.push({nombre:'Admin',usuario:'admin',hash:hashSimple('1234'),rol:'admin'});
+    save();
+  }
+
+  const u=DB.usuarios.find(x=>x.usuario===user&&x.hash===hashSimple(pass));
+  if(!u){shakeLogin('Usuario o contraseña incorrectos');return;}
+
+  SESSION={user:u.usuario,nombre:u.nombre,rol:u.rol};
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-shell').style.display='flex';
+  document.getElementById('sb-name').textContent=u.nombre;
+  document.getElementById('sb-av').textContent=u.nombre.slice(0,2).toUpperCase();
+  document.getElementById('u-role-lbl').textContent=u.rol==='admin'?'Administrador':'Cajero';
+
+  // Filtrar menú según rol
+  const permitidos=getPermisosUsuario(u);
+  document.querySelectorAll('.ni[data-sec]').forEach(n=>{
+    n.style.display=permitidos.includes(n.dataset.sec)?'flex':'none';
+  });
+
+  // Ir a primera sección permitida
+  const first=permitidos[0]||'ventas';
+  goto(first, document.querySelector(`.ni[data-sec="${first}"]`));
+
+  // Sincronización bidireccional con Drive al iniciar sesión
+  syncOnLogin();
+}
+
+function shakeLogin(msg=''){
+  const box=document.getElementById('login-box');
+  box.style.animation='none';
+  void box.offsetWidth;
+  box.style.animation='shake .4s ease';
+  if(msg) document.getElementById('login-error').textContent=msg;
+}
+
+function logoutApp(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  SESSION={user:null,rol:null};
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-error').textContent='';
+}
+
+function renderUsuarios(){
+  const tbody=document.getElementById('usr-tbody');
+  tbody.innerHTML=DB.usuarios.length?DB.usuarios.map(u=>`
+    <tr>
+      <td>${u.nombre}</td>
+      <td class="mono">${u.usuario}</td>
+      <td><span class="badge ${u.rol==='admin'?'purple':u.rol==='personalizado'?'warn':'blue'}">${u.rol==='admin'?'👑 Admin':u.rol==='personalizado'?'🎛️ '+((u.permisos||[]).length)+' módulos':'🏧 Caja'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn xs" onclick="editUsuario('${u.usuario}')">✏️</button>
+        <button class="btn xs dang" onclick="delUsuario('${u.usuario}')">🗑</button>
+      </td>
+    </tr>`).join('')
+    :'<tr><td colspan="4" class="es">Sin usuarios</td></tr>';
+}
+
+function editUsuario(usr){openUsuario(usr);}
+
+function guardarUsuario(){
+  const nombre=document.getElementById('u-nombre').value.trim();
+  const usuario=document.getElementById('u-usuario').value.trim().toLowerCase();
+  const pass=document.getElementById('u-pass').value;
+  const rol=document.getElementById('u-rol').value;
+  const editId=document.getElementById('u-edit-id').value;
+  if(!nombre||!usuario){toast('Nombre y usuario son obligatorios','⚠️');return;}
+  if(!editId&&DB.usuarios.find(u=>u.usuario===usuario)){toast('Ese usuario ya existe','❌');return;}
+  if(!editId&&!pass){toast('Ingresa una contraseña','⚠️');return;}
+
+  // Recoger permisos personalizados
+  let permisos=[];
+  if(rol==='personalizado'){
+    permisos=Object.keys(ROL_LABELS).filter(k=>{
+      const cb=document.getElementById('perm-'+k);
+      return cb&&cb.checked;
+    });
+    if(!permisos.length){toast('Selecciona al menos un módulo','⚠️');return;}
+  }
+
+  if(editId){
+    const u=DB.usuarios.find(x=>x.usuario===editId);
+    if(u){u.nombre=nombre;u.rol=rol;u.permisos=permisos;if(pass)u.hash=hashSimple(pass);}
+  }else{
+    DB.usuarios.push({nombre,usuario,hash:hashSimple(pass),rol,permisos});
+  }
+  save(); closeModal('mo-usuario'); renderUsuarios();
+  toast(editId?'Usuario actualizado':'Usuario creado','👤');
+}
+
+function delUsuario(usr){
+  if(usr===SESSION.user){toast('No puedes eliminar tu propio usuario','❌');return;}
+  if(!confirm('¿Eliminar usuario "'+usr+'"?'))return;
+  DB.usuarios=DB.usuarios.filter(u=>u.usuario!==usr);
+  save(); renderUsuarios(); toast('Usuario eliminado','🗑');
+}
+
+// ══════════════════════════════
+//  CONFIG IMPRESORA
+// ══════════════════════════════
+function renderImpresora(){
+  const imp=DB.impresora;
+  document.getElementById('imp-ancho').value=imp.ancho||80;
+  document.getElementById('imp-nombre').value=imp.nombreCentro||DB.config.nombre||'';
+  document.getElementById('imp-dir').value=imp.direccion||'';
+  document.getElementById('imp-tel').value=imp.telefono||'';
+  document.getElementById('imp-footer').value=imp.footer||'Gracias por su visita';
+  document.getElementById('imp-copias').value=imp.copias||1;
+  document.getElementById('imp-cajon').checked=imp.cajon||false;
+  document.getElementById('imp-autoclose').checked=imp.autoClose!==false;
+}
+
+function saveImpresora(){
+  DB.impresora={
+    ancho:parseInt(document.getElementById('imp-ancho').value)||80,
+    nombreCentro:document.getElementById('imp-nombre').value,
+    direccion:document.getElementById('imp-dir').value,
+    telefono:document.getElementById('imp-tel').value,
+    footer:document.getElementById('imp-footer').value,
+    copias:parseInt(document.getElementById('imp-copias').value)||1,
+    cajon:document.getElementById('imp-cajon').checked,
+    autoClose:document.getElementById('imp-autoclose').checked,
+  };
+  save(); toast('Configuración de impresora guardada','🖨️');
+  updateImpResumen();
+}
+
+function testImpresora(){
+  imprimirRecibo({
+    id:'TEST-001',fecha:today(),nombre:'Paciente de Prueba',cedula:'123456789',
+    clinica:'Clínica Ejemplo',estudio:'Panorámica',formato:'Digital',
+    metodo:'Efectivo',valor:85000,pagado:100000,devuelta:15000,
+    notas:'Recibo de prueba — no válido',telefono:'+57 300 000 0000'
+  });
+}
+
+function abrirCajonManual(){
+  if(!DB.impresora.cajon){toast('Activa el cajón monedero en config','⚠️');return;}
+  abrirCajon();
+}
+
+// ══════════════════════════════
+//  EXTENDER renderConfig
+// ══════════════════════════════
+const _origRenderConfig=renderConfig;
+renderConfig=function(){
+  _origRenderConfig?.();
+  renderUsuarios();
+  renderImpresora();
+  updateImpResumen();
+};
+
+// ══════════════════════════════
+//  USUARIOS — funciones faltantes
+// ══════════════════════════════
+const ROL_LABELS={
+  dashboard:'📊 Dashboard',ventas:'🏧 Ventas',inventario:'📦 Inventario',
+  recetas:'🔬 Recetas',gastos:'💸 Gastos',historial:'🗂 Historial',config:'⚙️ Configuración'
+};
+
+function openUsuario(usr){
+  const u=usr?DB.usuarios.find(x=>x.usuario===usr):null;
+  document.getElementById('mu-title').textContent=u?'Editar Usuario':'Nuevo Usuario';
+  document.getElementById('u-nombre').value=u?u.nombre:'';
+  document.getElementById('u-usuario').value=u?u.usuario:'';
+  document.getElementById('u-usuario').readOnly=!!u;
+  document.getElementById('u-pass').value='';
+  document.getElementById('u-pass-hint').textContent=u?'(vacío = no cambiar)':'(mín. 4 caracteres)';
+  document.getElementById('u-rol').value=u?u.rol:'caja';
+  document.getElementById('u-edit-id').value=u?u.usuario:'';
+  // Reset checkboxes
+  document.getElementById('permisos-checkboxes').innerHTML='';
+  document.getElementById('permisos-custom-wrap').style.display='none';
+  previewRol();
+  // Si es personalizado, cargar permisos guardados
+  if(u&&u.rol==='personalizado'&&u.permisos){
+    // Esperar a que se generen los checkboxes
+    setTimeout(()=>{
+      u.permisos.forEach(p=>{
+        const cb=document.getElementById('perm-'+p);
+        if(cb)cb.checked=true;
+      });
+      previewRol();
+    },50);
+  }
+  openModal('mo-usuario');
+}
+
+function previewRol(){
+  const rol=document.getElementById('u-rol').value;
+  const customWrap=document.getElementById('permisos-custom-wrap');
+  const cbWrap=document.getElementById('permisos-checkboxes');
+
+  if(rol==='personalizado'){
+    customWrap.style.display='block';
+    // Generar checkboxes si no existen
+    if(!cbWrap.children.length){
+      cbWrap.innerHTML=Object.keys(ROL_LABELS).map(k=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg4);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12.5px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text)">
+          <input type="checkbox" id="perm-${k}" onchange="previewRol()" style="width:15px;height:15px;accent-color:var(--accent2)">
+          ${ROL_LABELS[k]}
+        </label>`).join('');
+    }
+  }else{
+    customWrap.style.display='none';
+  }
+
+  let perms;
+  if(rol==='personalizado'){
+    perms=Object.keys(ROL_LABELS).filter(k=>document.getElementById('perm-'+k)?.checked);
+  }else{
+    perms=PERMISOS[rol]||[];
+  }
+  document.getElementById('rol-permisos-list').innerHTML=
+    Object.keys(ROL_LABELS).map(k=>`<span class="badge ${perms.includes(k)?'green':'red'}" style="opacity:${perms.includes(k)?1:.4}">${ROL_LABELS[k]}</span>`).join('');
+}
+
+function openImpresora(){
+  renderImpresora();
+  openModal('mo-impresora');
+}
+
+function updateImpResumen(){
+  const imp=DB.impresora;
+  const el=document.getElementById('imp-resumen');
+  const est=document.getElementById('imp-estado');
+  if(el&&est){
+    el.textContent=`Papel: ${imp.ancho}mm · Copias: ${imp.copias||1} · Cajón: ${imp.cajon?'Activado':'Desactivado'}`;
+    est.textContent=imp.nombreCentro?'Configurada':'Sin configurar';
+    est.className='badge '+(imp.nombreCentro?'green':'gray');
+  }
+}
+
+// ══════════════════════════════
+//  INIT
+// ══════════════════════════════
+// Seed admin por defecto si no hay usuarios
+if(DB.usuarios.length===0){
+  DB.usuarios.push({nombre:'Administrador',usuario:'admin',hash:hashSimple('1234'),rol:'admin'});
+  save();
+}
+// Mostrar pantalla de login al inicio
+document.getElementById('app-shell').style.display='none';
+document.getElementById('login-screen').style.display='flex';
+// Enter en campos de login
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')loginApp();});
+document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
+// Cargar URL Drive al abrir modal
+document.getElementById('mo-drive').addEventListener('click',()=>{
+  const url=DB.config.driveUrl;
+  if(url)document.getElementById('drive-url').value=url;
+});
+</script>
+</body>
+</html>
